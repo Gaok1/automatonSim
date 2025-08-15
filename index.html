@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Simulador Interativo de AFD</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --bg:#0f172a;            /* slate-900 */
+    --panel:#111827;         /* gray-900 */
+    --soft:#1f2937;          /* gray-800 */
+    --muted:#334155;         /* slate-700 */
+    --ink:#e5e7eb;           /* gray-200 */
+    --accent:#22d3ee;        /* cyan-400 */
+    --accent2:#a78bfa;       /* violet-400 */
+    --danger:#fb7185;        /* rose-400 */
+    --ok:#34d399;            /* emerald-400 */
+    --warn:#fbbf24;          /* amber-400 */
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:linear-gradient(180deg,#0b1223 0%, #0f172a 100%);
+    color:var(--ink);
+    font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    height:100vh; display:flex; gap:16px; padding:16px;
+  }
+  .left, .right{display:flex; flex-direction:column; gap:12px}
+  .left{flex:1; min-width:560px}
+  .card{
+    background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:16px; padding:12px 12px;
+    box-shadow:0 10px 30px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  h2{margin:0 0 8px; font-size:16px; font-weight:700; color:#e2e8f0}
+  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  input[type=text]{background:var(--panel); border:1px solid var(--muted); color:var(--ink);
+    padding:8px 10px; border-radius:10px; outline:none; min-width:120px}
+  input[type=text]::placeholder{color:#94a3b8}
+  button{
+    background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.06));
+    color:var(--ink); border:1px solid rgba(255,255,255,.12);
+    padding:8px 12px; border-radius:12px; cursor:pointer; font-weight:600;
+    transition:transform .05s ease, filter .2s ease, background .2s ease;
+  }
+  button:hover{filter:brightness(1.15)}
+  button:active{transform:translateY(1px)}
+  .btn-accent{border-color:rgba(34,211,238,.35); box-shadow:0 0 0 2px rgba(34,211,238,.15) inset}
+  .btn-danger{border-color:rgba(251,113,133,.35)}
+  .btn-soft{background:var(--soft)}
+  label{opacity:.9}
+  .pill{padding:4px 8px; border-radius:999px; background:rgba(148,163,184,.12); border:1px solid rgba(148,163,184,.25)}
+  .grid{display:grid; gap:12px}
+  .grid.cols-2{grid-template-columns: 1fr 1fr}
+  .muted{color:#94a3b8}
+  .ok{color:var(--ok); font-weight:700}
+  .err{color:var(--danger); font-weight:700}
+  .warn{color:var(--warn); font-weight:700}
+
+  /* Canvas (SVG) */
+  #canvasWrapper{position:relative; flex:1; min-height:480px}
+  svg{width:100%; height:100%; min-height:520px; border-radius:16px; background:
+      radial-gradient(1000px 600px at 10% -10%, rgba(167,139,250,.1),rgba(34,211,238,.05),transparent),
+      linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+    border:1px solid rgba(255,255,255,.08);
+    backdrop-filter: blur(2px);
+  }
+  .state{ cursor:grab; filter: drop-shadow(0 6px 20px rgba(0,0,0,.35)); }
+  .state:active{cursor:grabbing}
+  .st-circle{fill:#0b1223; stroke:#7dd3fc; stroke-width:2.5}
+  .st-circle.final{stroke:#a78bfa; stroke-width:3.5}
+  .st-label{fill:#e5e7eb; font-weight:700; font-size:12px; pointer-events:none}
+  .initialPointer path{stroke:#67e8f9; opacity:.9}
+  .edge{stroke:#cbd5e1; stroke-width:2; fill:none; opacity:.98}
+  .edge.sel{stroke:var(--accent); stroke-width:2.6}
+  .edge-label{
+    fill:#e2e8f0; font-size:12px; font-weight:700;
+    paint-order: stroke; stroke:rgba(0,0,0,.55); stroke-width:2px;
+  }
+  .legend{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .legend .dot{width:10px; height:10px; border-radius:999px; display:inline-block}
+  .dot-initial{background:#67e8f9}
+  .dot-final{background:#a78bfa}
+  .dot-halt{background:#fb7185}
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap}
+  .kbd{font:12px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background:#0b1223; border:1px solid rgba(255,255,255,.1); border-radius:8px; padding:2px 6px}
+  .mini{font-size:12px}
+  .scroll{max-height:180px; overflow:auto; border:1px dashed rgba(148,163,184,.25); padding:8px; border-radius:10px}
+  .hr{height:1px; background:rgba(255,255,255,.08); margin:6px 0}
+  .badge{padding:2px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.05)}
+</style>
+</head>
+<body>
+
+<div class="left">
+  <div class="card">
+    <h2>Alfabeto</h2>
+    <div class="row">
+      <input type="text" id="alphabetInput" placeholder="Símbolos separados por vírgula. Ex: A,B" />
+      <button class="btn-accent" id="setAlphabetBtn">Definir</button>
+      <span class="muted mini">Use apenas símbolos unitários (sem strings). Ex.: <span class="kbd">A</span>, <span class="kbd">B</span>, <span class="kbd">0</span>, <span class="kbd">1</span>.</span>
+    </div>
+    <div id="alphabetView" class="pill muted">Σ = { }</div>
+  </div>
+
+  <div class="card">
+    <h2>Estados & Modos</h2>
+    <div class="toolbar">
+      <button id="addStateBtn">+ Estado</button>
+      <button id="toggleInitialBtn" class="btn-soft">Alternar Inicial</button>
+      <button id="toggleFinalBtn" class="btn-soft">Alternar Final</button>
+      <button id="deleteSelectedBtn" class="btn-danger">Excluir Selecionado</button>
+      <span class="badge" id="modeBadge">Modo: Mover/Selecionar</span>
+      <button id="modeConnectBtn" class="btn-accent">Modo Conectar</button>
+      <button id="resetBtn" class="btn-danger">Limpar AFD</button>
+    </div>
+    <div class="legend">
+      <span class="dot dot-initial"></span><span class="mini">Inicial</span>
+      <span class="dot dot-final"></span><span class="mini">Final</span>
+      <span class="dot dot-halt"></span><span class="mini">HALT (transição ausente)</span>
+    </div>
+    <div class="hr"></div>
+    <div class="row mini muted">Dica: clique em um estado para selecioná-lo. No modo Conectar, clique em origem e depois em destino; escolherá o símbolo.</div>
+  </div>
+
+  <div class="card grid cols-2">
+    <div>
+      <h2>Simular Palavra</h2>
+      <div class="row">
+        <input type="text" id="wordInput" placeholder="Ex: ABAAB" />
+        <button id="runBtn" class="btn-accent">Rodar</button>
+      </div>
+      <div id="runResult" class="mini"></div>
+      <div id="runSteps" class="scroll mini"></div>
+    </div>
+    <div>
+      <h2>Expressão Regular (AFD → ER)</h2>
+      <div class="row">
+        <label><input type="checkbox" id="allowEpsilon" /> Permitir ε na saída</label>
+        <button id="buildRegexBtn">Gerar ER</button>
+      </div>
+      <div id="regexMsg" class="mini muted"></div>
+      <div id="regexOut" class="pill" style="margin-top:6px; font-weight:700; font-size:15px;"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Exportar / Importar</h2>
+    <div class="toolbar">
+      <button id="exportBtn" class="btn-soft">Exportar AFD</button>
+      <button id="importBtn" class="btn-soft">Importar AFD</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none" />
+    </div>
+    <div class="mini muted">Exporta um JSON com Σ, estados, transições, inicial e <code>nextId</code>. Importar substituirá o AFD atual.</div>
+  </div>
+</div>
+
+<div class="right card" style="flex:1.2">
+  <h2>Canvas</h2>
+  <div id="canvasWrapper">
+    <svg id="svg">
+      <defs>
+        <marker id="arrow" markerWidth="18" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L10,6 L0,12 z" fill="#cbd5e1"></path>
+        </marker>
+      </defs>
+      <g id="edges"></g>
+      <g id="labels"></g>
+      <g id="initialPointers"></g>
+      <g id="states"></g>
+    </svg>
+  </div>
+  <div class="hr"></div>
+  <div class="mini muted">Transições</div>
+  <div id="transitionsList" class="scroll mini"></div>
+</div>
+
+
+<div class="card">
+  <h2>Operações entre AFDs</h2>
+  <div class="toolbar">
+    <button id="unionBtn" class="btn-soft">União</button>
+    <button id="intersectionBtn" class="btn-soft">Interseção</button>
+    <input type="file" id="importFile1" accept="application/json" style="display:none" />
+    <input type="file" id="importFile2" accept="application/json" style="display:none" />
+  </div>
+</div>
+
+<script>
+/* -------------------- Modelo de dados -------------------- */
+const A = {
+  alphabet: new Set(),
+  states: new Map(),            // id -> {id,name,x,y,isInitial,isFinal}
+  nextId: 0,
+  selectedStateId: null,
+  connectMode: false,
+  connectFrom: null,            // id origem na conexão
+  transitions: new Map(),       // key: src|sym -> dest
+  initialId: undefined,
+};
+
+const LS_KEY = 'afd_sim_state_v2';
+
+const svg = document.getElementById('svg');
+const gStates = document.getElementById('states');
+const gEdges  = document.getElementById('edges');
+const gLabels = document.getElementById('labels');
+const gInitial = document.getElementById('initialPointers');
+
+const elAlphabetView = document.getElementById('alphabetView');
+const elTransitionsList = document.getElementById('transitionsList');
+const elModeBadge = document.getElementById('modeBadge');
+const elRunResult = document.getElementById('runResult');
+const elRunSteps = document.getElementById('runSteps');
+const elRegexOut = document.getElementById('regexOut');
+const elRegexMsg = document.getElementById('regexMsg');
+document.getElementById('unionBtn').onclick = () => importTwoAndCombine('union');
+document.getElementById('intersectionBtn').onclick = () => importTwoAndCombine('intersection');
+
+
+
+/* -------------------- Utilidades -------------------- */
+const keyTS = (s, sym) => `${s}|${sym}`;
+const id = () => `q${A.nextId++}`;
+const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+
+function alphaStr(){
+  return Array.from(A.alphabet).join(', ');
+}
+function markSelected(id){
+  A.selectedStateId = id;
+  renderStates();
+}
+function ensureUniqueSymbols(str){
+  return Array.from(new Set(str.split(',').map(s=>s.trim()).filter(Boolean)));
+}
+
+/* -------------------- Persistência -------------------- */
+function snapshot(){
+  return {
+    version: 2,
+    alphabet: Array.from(A.alphabet),
+    states: Array.from(A.states.values()).map(s=>({id:s.id,name:s.name,x:s.x,y:s.y,isInitial:s.isInitial,isFinal:s.isFinal})),
+    nextId: A.nextId,
+    transitions: Array.from(A.transitions.entries()),
+    initialId: A.initialId,
+  };
+}
+function saveLS(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(snapshot())); }catch(e){ console.warn('localStorage save failed', e); }
+}
+function loadLS(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return false;
+    const data = JSON.parse(raw);
+    restoreFromObject(data);
+    return true;
+  }catch(e){ console.warn('localStorage load failed', e); return false; }
+}
+function resetAll(){
+  localStorage.removeItem(LS_KEY);
+  A.alphabet = new Set();
+  A.states.clear();
+  A.transitions.clear();
+  A.nextId = 0; A.initialId = undefined; A.selectedStateId = null; A.connectFrom = null; A.connectMode = false;
+  elAlphabetView.textContent = 'Σ = { }';
+  renderAll();
+}
+
+document.getElementById('resetBtn').onclick = ()=>{ resetAll(); };
+
+/* -------------------- Interações UI básicas -------------------- */
+document.getElementById('setAlphabetBtn').onclick = ()=>{
+  const raw = document.getElementById('alphabetInput').value;
+  const syms = ensureUniqueSymbols(raw);
+  A.alphabet = new Set(syms);
+  elAlphabetView.textContent = `Σ = { ${alphaStr()} }`;
+  renderAll(); saveLS();
+};
+
+document.getElementById('addStateBtn').onclick = ()=>{
+  const s = { id: id(), name: '', x: 120 + Math.random()*320, y: 120 + Math.random()*220,
+              isInitial: A.states.size===0, isFinal:false };
+  s.name = s.id;
+  A.states.set(s.id, s);
+  if(s.isInitial){ A.initialId = s.id; }
+  markSelected(s.id);
+  renderAll(); saveLS();
+};
+
+document.getElementById('toggleInitialBtn').onclick = ()=>{
+  if(!A.selectedStateId) return;
+  for (const st of A.states.values()) st.isInitial = false;
+  A.states.get(A.selectedStateId).isInitial = true;
+  A.initialId = A.selectedStateId;
+  renderAll(); saveLS();
+};
+document.getElementById('toggleFinalBtn').onclick = ()=>{
+  if(!A.selectedStateId) return;
+  const s = A.states.get(A.selectedStateId);
+  s.isFinal = !s.isFinal;
+  renderAll(); saveLS();
+};
+document.getElementById('deleteSelectedBtn').onclick = ()=>{
+  if(!A.selectedStateId) return;
+  const sid = A.selectedStateId;
+  for (const [k,v] of Array.from(A.transitions.entries())){
+    const [src] = k.split('|');
+    if (src===sid || v===sid) A.transitions.delete(k);
+  }
+  A.states.delete(sid);
+  if (A.initialId===sid) A.initialId = undefined;
+  A.selectedStateId = null;
+  renderAll(); saveLS();
+};
+
+document.getElementById('modeConnectBtn').onclick = ()=>{
+  A.connectMode = !A.connectMode;
+  A.connectFrom = null;
+  elModeBadge.textContent = `Modo: ${A.connectMode?'Conectar':'Mover/Selecionar'}`;
+};
+
+/* -------------------- Exportar / Importar -------------------- */
+const exportBtn = document.getElementById('exportBtn');
+const importBtn = document.getElementById('importBtn');
+const importFile = document.getElementById('importFile');
+
+exportBtn.onclick = ()=>{
+  const data = snapshot();
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const ts = new Date().toISOString().replace(/[:.]/g,'-');
+  a.href = url; a.download = `afd-${ts}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+};
+
+importBtn.onclick = ()=> importFile.click();
+
+importFile.onchange = (e)=>{
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try {
+      const obj = JSON.parse(reader.result);
+      if (!confirm('Importar irá substituir o AFD atual. Continuar?')){ importFile.value=''; return; }
+      restoreFromObject(obj);
+      saveLS();
+      renderAll();
+    } catch(err){
+      alert('Arquivo inválido: ' + err.message);
+    } finally {
+      importFile.value='';
+    }
+  };
+  reader.readAsText(file);
+};
+
+function restoreFromObject(obj){
+  // validações básicas
+  if (!obj || typeof obj !== 'object') throw new Error('JSON malformado');
+  if (!Array.isArray(obj.states) || !Array.isArray(obj.alphabet)) throw new Error('Faltam campos essenciais');
+  const ids = new Set(obj.states.map(s=>s.id));
+  if (obj.initialId && !ids.has(obj.initialId)) throw new Error('initialId inexistente nos estados');
+  // reconstrução
+  A.alphabet = new Set(obj.alphabet);
+  A.states.clear();
+  for (const st of obj.states){ A.states.set(st.id, {...st}); }
+  A.initialId = obj.initialId;
+  A.nextId = typeof obj.nextId==='number' ? obj.nextId : (obj.states.length);
+  A.transitions = new Map();
+  if (Array.isArray(obj.transitions)){
+    for (const [k,v] of obj.transitions){
+      const [src,sym] = String(k).split('|');
+      if (!ids.has(src) || !ids.has(v)) continue; // ignora lixo
+      A.transitions.set(k, v);
+    }
+  }
+  elAlphabetView.textContent = `Σ = { ${alphaStr()} }`;
+}
+
+/* -------------------- Canvas: estados (arrastar) -------------------- */
+function renderStates(){
+  gStates.innerHTML = '';
+  gInitial.innerHTML = '';
+  for (const s of A.states.values()){
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.classList.add('state');
+    g.setAttribute('data-id', s.id);
+
+    const r = 24;
+    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx', s.x);
+    circle.setAttribute('cy', s.y);
+    circle.setAttribute('r', r);
+    circle.setAttribute('class','st-circle' + (s.isFinal?' final':''));
+    if (A.selectedStateId===s.id) circle.style.stroke = 'var(--accent)';
+
+    const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+    label.setAttribute('x', s.x);
+    label.setAttribute('y', s.y+4);
+    label.setAttribute('text-anchor','middle');
+    label.setAttribute('class','st-label');
+    label.textContent = s.name;
+
+    g.appendChild(circle);
+    g.appendChild(label);
+    gStates.appendChild(g);
+
+    // seta inicial tangente à borda
+    if (s.isInitial){
+      const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+      const ex = s.x - r - 2, ey = s.y; // ponto na borda
+      const sx = ex - 42, sy = ey;      // início à esquerda
+      p.setAttribute('d', `M ${sx},${sy} L ${ex},${ey}`);
+      p.setAttribute('class','edge initialPointer');
+      p.setAttribute('marker-end','url(#arrow)');
+      gInitial.appendChild(p);
+    }
+
+    // eventos
+    g.addEventListener('mousedown', (ev)=>{
+      ev.preventDefault();
+      const sid = s.id;
+      if (A.connectMode){
+        if (!A.connectFrom){
+          A.connectFrom = sid;
+          markSelected(sid);
+        }else{
+          const from = A.connectFrom, to = sid;
+          if (!A.alphabet.size){
+            alert('Defina Σ (alfabeto) primeiro.');
+            A.connectFrom = null;
+            return;
+          }
+          promptSymbolAndCreate(from,to);
+          A.connectFrom = null;
+        }
+      }else{
+        markSelected(sid);
+        startDrag(ev, sid);
+      }
+    });
+  }
+}
+
+function startDrag(ev, sid){
+  const s = A.states.get(sid);
+  const pt = svg.createSVGPoint();
+  let startX = s.x, startY = s.y;
+  pt.x = ev.clientX; pt.y = ev.clientY;
+  const m = svg.getScreenCTM().inverse();
+  let p0 = pt.matrixTransform(m);
+  function onMove(e){
+    pt.x = e.clientX; pt.y = e.clientY;
+    const p = pt.matrixTransform(m);
+    const dx = p.x - p0.x, dy = p.y - p0.y;
+    s.x = clamp(startX + dx, 30, svg.clientWidth-30);
+    s.y = clamp(startY + dy, 30, svg.clientHeight-30);
+    renderAll();
+  }
+  function onUp(){
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
+    saveLS();
+  }
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+}
+
+/* -------------------- Transições -------------------- */
+function promptSymbolAndCreate(from,to){
+  const syms = Array.from(A.alphabet);
+  const sym = window.prompt(`Símbolo da transição ${A.states.get(from).name} → ${A.states.get(to).name}\nΣ = { ${syms.join(', ')} }`);
+  if (!sym) return;
+  if (!A.alphabet.has(sym)){
+    alert('Símbolo não pertence a Σ.');
+    return;
+  }
+  const k = keyTS(from, sym);
+  if (A.transitions.has(k) && A.transitions.get(k)!==to){
+    alert(`AFD é determinístico: já existe transição (${A.states.get(from).name}, ${sym}) → ${A.states.get(A.transitions.get(k)).name}`);
+    return;
+  }
+  A.transitions.set(k, to);
+  renderAll(); saveLS();
+}
+
+function groupEdges(){
+  const map = new Map();
+  for (const [k, to] of A.transitions.entries()){
+    const [src, sym] = k.split('|');
+    const gk = `${src}|${to}`;
+    if (!map.has(gk)) map.set(gk, {src, to, syms:[]});
+    map.get(gk).syms.push(sym);
+  }
+  return Array.from(map.values());
+}
+
+function edgePathTrimmed(a,b){
+  const SA = A.states.get(a), SB = A.states.get(b);
+  const r = 24;
+  if (a===b){
+    const x = SA.x, y = SA.y - r - 14;
+    return `M ${x-6},${y} C ${x-54},${y-34} ${x+54},${y-34} ${x+6},${y}`;
+  }
+  const dx = SB.x - SA.x, dy = SB.y - SA.y;
+  const mx = (SA.x + SB.x)/2, my = (SA.y + SB.y)/2;
+  const norm = Math.hypot(dx,dy) || 1;
+  const off = 22;
+  const nx = -dy/norm*off, ny = dx/norm*off;
+  const cx = mx + nx, cy = my + ny;
+
+  let ux = cx - SA.x, uy = cy - SA.y; let un = Math.hypot(ux,uy)||1; ux/=un; uy/=un;
+  const sx = SA.x + ux*(r+2), sy = SA.y + uy*(r+2);
+
+  let vx = SB.x - cx, vy = SB.y - cy; let vn = Math.hypot(vx,vy)||1; vx/=vn; vy/=vn;
+  const ex = SB.x - vx*(r+2), ey = SB.y - vy*(r+2);
+
+  return `M ${sx},${sy} Q ${cx},${cy} ${ex},${ey}`;
+}
+
+function renderEdges(){
+  gEdges.innerHTML = ''; gLabels.innerHTML = '';
+  const grouped = groupEdges();
+  for (const e of grouped){
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', edgePathTrimmed(e.src, e.to));
+    path.setAttribute('class','edge');
+    path.setAttribute('marker-end','url(#arrow)');
+    gEdges.appendChild(path);
+
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('class','edge-label');
+    const sA = A.states.get(e.src), sB = A.states.get(e.to);
+    const mx = (sA.x + sB.x)/2, my = (sA.y + sB.y)/2;
+    let dx = sB.x - sA.x, dy = sB.y - sA.y;
+    const norm = Math.hypot(dx,dy)||1;
+    const nx = -dy/norm*12, ny = dx/norm*12;
+    if (e.src===e.to){ t.setAttribute('x', sA.x+2); t.setAttribute('y', sA.y-44); }
+    else{ t.setAttribute('x', mx+nx); t.setAttribute('y', my+ny); }
+    t.textContent = e.syms.sort().join(' , ');
+    gLabels.appendChild(t);
+  }
+  elTransitionsList.innerHTML = '';
+  for (const [k,to] of A.transitions.entries()){
+    const [src,sym] = k.split('|');
+    const item = document.createElement('div');
+    item.innerHTML = `<span class="kbd">${A.states.get(src)?.name || src}</span> , <span class="kbd">${sym}</span> → <span class="kbd">${A.states.get(to)?.name || to}</span>
+      <button class="mini btn-danger" style="margin-left:8px">remover</button>`;
+    item.querySelector('button').onclick = ()=>{ A.transitions.delete(k); renderAll(); saveLS(); };
+    elTransitionsList.appendChild(item);
+  }
+}
+
+/* -------------------- Render geral -------------------- */
+function renderAll(){
+  renderStates();
+  renderEdges();
+}
+
+/* -------------------- Simulação (com HALT) -------------------- */
+document.getElementById('runBtn').onclick = ()=>{
+  elRunSteps.innerHTML = ''; elRunResult.innerHTML = '';
+  const w = (document.getElementById('wordInput').value || '').trim().split('');
+  if (!A.initialId){ elRunResult.innerHTML = `<span class="warn">Defina um estado inicial.</span>`; return; }
+  if (!A.alphabet.size){ elRunResult.innerHTML = `<span class="warn">Defina Σ.</span>`; return; }
+  for (const c of w) if (!A.alphabet.has(c)){
+    elRunResult.innerHTML = `<span class="err">HALT: símbolo "${c}" não pertence a Σ = { ${alphaStr()} }.</span>`;
+    return;
+  }
+  let cur = A.initialId;
+  addStep(`Início em ${A.states.get(cur).name}`);
+  for (const c of w){
+    const k = keyTS(cur, c);
+    if (!A.transitions.has(k)){
+      elRunResult.innerHTML = `<span class="err">HALT: transição não definida para (${A.states.get(cur).name}, ${c})</span>`;
+      markSelected(cur);
+      return;
+    }
+    const nxt = A.transitions.get(k);
+    addStep(`(${A.states.get(cur).name}, ${c}) → ${A.states.get(nxt).name}`);
+    cur = nxt;
+  }
+  const acc = A.states.get(cur)?.isFinal;
+  if (acc){
+    elRunResult.innerHTML = `<span class="ok">ACEITA</span> (terminou em estado final ${A.states.get(cur).name})`;
+  }else{
+    elRunResult.innerHTML = `<span class="err">REJEITADA</span> (terminou em estado não-final ${A.states.get(cur).name})`;
+  }
+  markSelected(cur);
+};
+
+function addStep(t){
+  const div = document.createElement('div'); div.textContent = t; elRunSteps.appendChild(div);
+}
+
+/* -------------------- Conversão DFA → ER (eliminação de estados) -------------------- */
+document.getElementById('buildRegexBtn').onclick = ()=>{
+  const allowEps = document.getElementById('allowEpsilon').checked;
+  const res = dfaToRegex(allowEps);
+  elRegexOut.textContent = res.output || '';
+  elRegexMsg.innerHTML = res.msg || '';
+};
+
+function dfaToRegex(allowEps=false){
+  const msg = [];
+  const states = Array.from(A.states.keys());
+  if (!A.initialId) return {output:'', msg:`<span class="warn">Defina um estado inicial.</span>`};
+  const finals = states.filter(s=>A.states.get(s).isFinal);
+  if (!finals.length) return {output:'', msg:`<span class="warn">Nenhum estado final definido.</span>`};
+  if (!A.alphabet.size) return {output:'', msg:`<span class="warn">Defina Σ.</span>`};
+
+  const idx = new Map(); states.forEach((s,i)=>idx.set(s,i));
+  const n = states.length;
+  let R = Array.from({length:n}, _=>Array.from({length:n}, _=>null));
+  for (const [k,to] of A.transitions.entries()){
+    const [src,sym] = k.split('|');
+    const i = idx.get(src), j = idx.get(to);
+    R[i][j] = R[i][j] ? union(R[i][j], sym) : sym;
+  }
+  const init = idx.get(A.initialId);
+  const fins = finals.map(f=>idx.get(f));
+
+  const N = n+2, Saux = n, Faux = n+1;
+  let G = Array.from({length:N}, _=>Array.from({length:N}, _=>null));
+  for (let i=0;i<n;i++) for (let j=0;j<n;j++) if (R[i][j]) G[i][j]=R[i][j];
+  G[Saux][init] = 'ε';
+  for (const j of fins) G[j][Faux] = union(G[j][Faux], 'ε');
+
+  const statesOrder = [];
+  for (let k=0;k<N;k++) if (k!==Saux && k!==Faux) statesOrder.push(k);
+
+  for (const k of statesOrder){
+    const Rkk = G[k][k] || null;
+    const starK = Rkk ? star(Rkk) : null;
+    for (let i=0;i<N;i++){
+      if (i===k) continue;
+      const Rik = G[i][k] || null;
+      if (!Rik) continue;
+      for (let j=0;j<N;j++){
+        if (j===k) continue;
+        const Rkj = G[k][j] || null;
+        if (!Rkj) continue;
+        const via = concat( concat(Rik, starK), Rkj );
+        G[i][j] = union(G[i][j], via);
+      }
+    }
+    for (let i=0;i<N;i++){ G[i][k]=null; G[k][i]=null; }
+    G[k][k]=null;
+  }
+
+  let Rfinal = G[Saux][Faux] || null;
+  if (!Rfinal){
+    return {output:'', msg:`<span class="warn">A linguagem reconhecida é vazia (sem caminhos).</span>`};
+  }
+
+  Rfinal = simplify(Rfinal);
+
+  if (!allowEps){
+    if (Rfinal.includes('ε')){
+      msg.push(`<span class="warn">A expressão exata envolve ε. Como você desativou “Permitir ε”, tentei remover/absorver ε por álgebra básica; se não foi possível sem alterar a linguagem, o resultado foi omitido.</span>`);
+      const noEps = dropEpsilonIfSafe(Rfinal);
+      if (noEps===null){
+        return {output:'', msg: msg.join('<br>')};
+      }else{
+        Rfinal = noEps;
+      }
+    }
+  }
+
+  if (!onlyAllowedTokens(Rfinal)){
+    msg.push(`<span class="warn">A saída usa apenas símbolos de Σ, parênteses, “∪” e “*”. Se vir algo diferente, houve falha na normalização.</span>`);
+  }
+
+  return {output:Rfinal, msg: msg.join('<br>')};
+}
+
+/* -------------------- Álgebra de regex -------------------- */
+function isNull(x){ return x===null || x==='∅'; }
+
+function isEps(x){ return x==='ε'; }
+
+function par(x){
+  if (!x) return null;
+  if (/^[A-Za-z0-9]$/.test(x) || x==='ε') return x;
+  if (x.endsWith('*') && balanced(x.slice(0,-1))) return x;
+  return `(${x})`;
+}
+
+function balanced(s){ let d=0; for(const c of s){ if(c==='(')d++; else if(c===')')d--; if(d<0)return false;} return d===0; }
+
+function union(a,b){
+  if (isNull(a)) return b||null;
+  if (isNull(b)) return a||null;
+  if (a===b) return a;
+  const parts = new Set(a.split(' ∪ ').concat(b.split(' ∪ ')));
+  return Array.from(parts).join(' ∪ ');
+}
+
+function concat(a,b){
+  if (isNull(a) || isNull(b)) return null;
+  if (isEps(a)) return b;
+  if (isEps(b)) return a;
+  return a && b ? (needsPar(a,'concat')+needsPar(b,'concat')) : null;
+}
+
+function needsPar(x,ctx){
+  const hasUnion = x.includes(' ∪ ');
+  const simpleAtom = /^[A-Za-z0-9]$/.test(x) || x==='ε' || (x.endsWith('*') && balanced(x.slice(0,-1)));
+  if (simpleAtom) return x;
+  if (ctx==='concat' && hasUnion) return `(${x})`;
+  return `(${x})`;
+}
+
+function star(x){
+  if (isNull(x)) return 'ε';
+  if (isEps(x)) return 'ε';
+  if (x.endsWith('*')) return x;
+  return `${needsPar(x)}*`;
+}
+
+function simplify(r){
+  if (!r) return r;
+  const parts = splitTopUnion(r);
+  const cleaned = parts.map(cleanFactor);
+  const uniq = Array.from(new Set(cleaned));
+  return uniq.join(' ∪ ');
+}
+
+function splitTopUnion(r){
+  const parts=[]; let d=0, cur='';
+  for (let i=0;i<r.length;i++){
+    const c=r[i];
+    if (c==='(') d++;
+    if (c===')') d--;
+    if (d===0 && r.slice(i,i+3)===' ∪ '){
+      parts.push(cur); cur=''; i+=2; continue;
+    }
+    cur+=c;
+  }
+  if (cur) parts.push(cur);
+  return parts;
+}
+
+function cleanFactor(f){
+  while (f.startsWith('(') && f.endsWith(')') && balanced(f.slice(1,-1))) f=f.slice(1,-1);
+  return f;
+}
+
+function dropEpsilonIfSafe(r){
+  if (!r.includes('ε')) return r;
+  const parts = splitTopUnion(r);
+  const hasEps = parts.includes('ε');
+  if (hasEps){
+    const others = parts.filter(p=>p!=='ε');
+    if (others.length===0){ return null; }
+    const someStar = others.some(p=>p.endsWith('*'));
+    if (someStar){ return simplify(others.join(' ∪ ')); }
+    return null;
+  }
+  return r.replaceAll('ε','');
+}
+function onlyAllowedTokens(r){ return /^[A-Za-z0-9 ()∪*]+$/.test(r); }
+
+/* -------------------- Inicial -------------------- */
+if(!loadLS()){
+  A.alphabet = new Set(['A','B']);
+  elAlphabetView.textContent = `Σ = { ${alphaStr()} }`;
+  const s0 = {id:id(), name:'q0', x:180, y:200, isInitial:true, isFinal:false};
+  const s1 = {id:id(), name:'q1', x:380, y:200, isInitial:false, isFinal:true};
+  A.states.set(s0.id,s0); A.states.set(s1.id,s1); A.initialId = s0.id; A.selectedStateId = s0.id;
+  A.transitions.set(keyTS(s0.id,'A'), s1.id);
+  A.transitions.set(keyTS(s1.id,'B'), s0.id);
+  saveLS();
+}
+
+// --- Renomear estados com duplo clique ---
+gStates.addEventListener('dblclick', (ev) => {
+  const target = ev.target.closest('.state');
+  if (!target) return;
+  const sid = target.getAttribute('data-id');
+  const st = A.states.get(sid);
+  if (!st) return;
+  const newName = prompt('Novo nome do estado:', st.name);
+  if (newName && newName.trim() !== '') {
+    st.name = newName.trim();
+    saveLS();
+    renderAll();
+  }
+});
+
+// --- União/Interseção ---
+
+function removeUnreachableStates(obj) {
+  const reachable = new Set();
+  function dfs(stateId) {
+    if (reachable.has(stateId)) return;
+    reachable.add(stateId);
+    for (const [k, dest] of obj.transitions) {
+      const [from] = k.split('|');
+      if (from === stateId) dfs(dest);
+    }
+  }
+  dfs(obj.initialId);
+  obj.states = obj.states.filter(s => reachable.has(s.id));
+  obj.transitions = obj.transitions.filter(([k, v]) => {
+    const [from] = k.split('|');
+    return reachable.has(from) && reachable.has(v);
+  });
+  return obj;
+}
+
+gStates.addEventListener('dblclick', (ev) => {
+  const target = ev.target.closest('.state');
+  if (!target) return;
+  const sid = target.getAttribute('data-id');
+  const st = A.states.get(sid);
+  if (!st) return;
+  const newName = prompt('Novo nome do estado:', st.name);
+  if (newName && newName.trim() !== '') {
+    st.name = newName.trim();
+    saveLS();
+    renderAll();
+  }
+});
+
+function combineAFDs(obj1, obj2, op) {
+  if (JSON.stringify(obj1.alphabet) !== JSON.stringify(obj2.alphabet)) {
+    alert('Alfabetos diferentes!');
+    return;
+  }
+  const alpha = obj1.alphabet;
+  const states = new Map();
+  const transitions = new Map();
+  const idMap = new Map();
+  let idCounter = 0;
+
+  for (const s1 of obj1.states) {
+    for (const s2 of obj2.states) {
+      const id = 'q' + (idCounter++);
+      const name = `(${s1.name},${s2.name})`;
+      const final = op === 'union' ? (s1.isFinal || s2.isFinal) : (s1.isFinal && s2.isFinal);
+      states.set(id, { id, name, x: Math.random()*500+50, y: Math.random()*300+50, isFinal: final, isInitial: false });
+      idMap.set(s1.id + '|' + s2.id, id);
+    }
+  }
+  const initialId = idMap.get(obj1.initialId + '|' + obj2.initialId);
+  states.get(initialId).isInitial = true;
+
+  for (const [id, st] of states) {
+    const [n1, n2] = st.name.replace(/[()]/g, '').split(',');
+    const s1 = obj1.states.find(s => s.name === n1);
+    const s2 = obj2.states.find(s => s.name === n2);
+    for (const sym of alpha) {
+      const dest1 = obj1.transitions.find(([k]) => k === (s1.id + '|' + sym));
+      const dest2 = obj2.transitions.find(([k]) => k === (s2.id + '|' + sym));
+      if (dest1 && dest2) {
+        const destId = idMap.get(dest1[1] + '|' + dest2[1]);
+        transitions.set(id + '|' + sym, destId);
+      }
+    }
+  }
+
+  let newObj = { alphabet: alpha, states: Array.from(states.values()), transitions: Array.from(transitions.entries()), initialId, nextId: idCounter };
+  newObj = removeUnreachableStates(newObj);
+  restoreFromObject(newObj);
+  saveLS();
+  renderAll();
+}
+
+function importTwoAndCombine(op) {
+  let data1 = null, data2 = null;
+  const file1 = document.getElementById('importFile1');
+  const file2 = document.getElementById('importFile2');
+  file1.onchange = () => {
+    const reader = new FileReader();
+    reader.onload = () => { data1 = JSON.parse(reader.result); file2.click(); };
+    reader.readAsText(file1.files[0]);
+  };
+  file2.onchange = () => {
+    const reader = new FileReader();
+    reader.onload = () => { data2 = JSON.parse(reader.result); combineAFDs(data1, data2, op); };
+    reader.readAsText(file2.files[0]);
+  };
+  file1.click();
+}
+
+renderAll();
+
+</script>
+</body>
+</html>
