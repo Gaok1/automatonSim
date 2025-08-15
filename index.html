@@ -25,7 +25,7 @@
     font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
     height:100vh; display:flex; gap:16px; padding:16px;
   }
-  .left, .right{display:flex; flex-direction:column; gap:12px}
+  .left, .right{display:flex; flex-direction:column; gap:16px}
   .left{flex:1; min-width:560px}
   .card{
     background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
@@ -34,7 +34,7 @@
     box-shadow:0 10px 30px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.04);
   }
   h2{margin:0 0 8px; font-size:16px; font-weight:700; color:#e2e8f0}
-  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
   input[type=text]{background:var(--panel); border:1px solid var(--muted); color:var(--ink);
     padding:8px 10px; border-radius:10px; outline:none; min-width:120px}
   input[type=text]::placeholder{color:#94a3b8}
@@ -78,12 +78,13 @@
     fill:#e2e8f0; font-size:12px; font-weight:700;
     paint-order: stroke; stroke:rgba(0,0,0,.55); stroke-width:2px;
   }
-  .legend{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .connect-handle{fill:var(--accent); stroke:var(--bg); stroke-width:2; cursor:pointer}
+  .legend{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
   .legend .dot{width:10px; height:10px; border-radius:999px; display:inline-block}
   .dot-initial{background:#67e8f9}
   .dot-final{background:#a78bfa}
   .dot-halt{background:#fb7185}
-  .toolbar{display:flex; gap:8px; flex-wrap:wrap}
+  .toolbar{display:flex; gap:12px; flex-wrap:wrap}
   .kbd{font:12px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background:#0b1223; border:1px solid rgba(255,255,255,.1); border-radius:8px; padding:2px 6px}
   .mini{font-size:12px}
   .scroll{max-height:180px; overflow:auto; border:1px dashed rgba(148,163,184,.25); padding:8px; border-radius:10px}
@@ -105,14 +106,12 @@
   </div>
 
   <div class="card">
-    <h2>Estados & Modos</h2>
+    <h2>Estados</h2>
     <div class="toolbar">
       <button id="addStateBtn">+ Estado</button>
       <button id="toggleInitialBtn" class="btn-soft">Alternar Inicial</button>
       <button id="toggleFinalBtn" class="btn-soft">Alternar Final</button>
       <button id="deleteSelectedBtn" class="btn-danger">Excluir Selecionado</button>
-      <span class="badge" id="modeBadge">Modo: Mover/Selecionar</span>
-      <button id="modeConnectBtn" class="btn-accent">Modo Conectar</button>
       <button id="resetBtn" class="btn-danger">Limpar AFD</button>
     </div>
     <div class="legend">
@@ -121,7 +120,7 @@
       <span class="dot dot-halt"></span><span class="mini">HALT (transição ausente)</span>
     </div>
     <div class="hr"></div>
-    <div class="row mini muted">Dica: clique em um estado para selecioná-lo. No modo Conectar, clique em origem e depois em destino; escolherá o símbolo.</div>
+    <div class="row mini muted">Dica: clique em um estado para selecioná-lo. Use <span class="kbd">C</span> ou o ícone de ligação para conectar: clique na origem e depois no destino para escolher o símbolo.</div>
   </div>
 
   <div class="card grid cols-2">
@@ -210,7 +209,6 @@ const gInitial = document.getElementById('initialPointers');
 
 const elAlphabetView = document.getElementById('alphabetView');
 const elTransitionsList = document.getElementById('transitionsList');
-const elModeBadge = document.getElementById('modeBadge');
 const elRunResult = document.getElementById('runResult');
 const elRunSteps = document.getElementById('runSteps');
 const elRegexOut = document.getElementById('regexOut');
@@ -316,11 +314,18 @@ document.getElementById('deleteSelectedBtn').onclick = ()=>{
   renderAll(); saveLS();
 };
 
-document.getElementById('modeConnectBtn').onclick = ()=>{
-  A.connectMode = !A.connectMode;
-  A.connectFrom = null;
-  elModeBadge.textContent = `Modo: ${A.connectMode?'Conectar':'Mover/Selecionar'}`;
-};
+document.addEventListener('keydown', ev => {
+  if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA') return;
+  if (ev.key.toLowerCase() === 'c') {
+    if (A.connectMode) {
+      A.connectMode = false;
+      A.connectFrom = null;
+    } else {
+      A.connectMode = true;
+      A.connectFrom = A.selectedStateId || null;
+    }
+  }
+});
 
 /* -------------------- Exportar / Importar -------------------- */
 const exportBtn = document.getElementById('exportBtn');
@@ -410,6 +415,22 @@ function renderStates(){
 
     g.appendChild(circle);
     g.appendChild(label);
+
+    if (A.selectedStateId===s.id){
+      circle.style.stroke = 'var(--accent)';
+      const handle = document.createElementNS('http://www.w3.org/2000/svg','path');
+      handle.setAttribute('d','M19.902 4.098a3.75 3.75 0 0 0-5.304 0l-4.5 4.5a3.75 3.75 0 0 0 1.035 6.037.75.75 0 0 1-.646 1.353 5.25 5.25 0 0 1-1.449-8.45l4.5-4.5a5.25 5.25 0 1 1 7.424 7.424l-1.757 1.757a.75.75 0 1 1-1.06-1.06l1.757-1.757a3.75 3.75 0 0 0 0-5.304Zm-7.389 4.267a.75.75 0 0 1 1-.353 5.25 5.25 0 0 1 1.449 8.45l-4.5 4.5a5.25 5.25 0 1 1-7.424-7.424l1.757-1.757a.75.75 0 1 1 1.06 1.06l-1.757 1.757a3.75 3.75 0 1 0 5.304 5.304l4.5-4.5a3.75 3.75 0 0 0-1.035-6.037.75.75 0 0 1-.354-1Z');
+      handle.setAttribute('class','connect-handle');
+      handle.setAttribute('transform', `translate(${s.x + r + 6},${s.y - r - 22}) scale(0.66)`);
+      handle.addEventListener('mousedown', ev=>{
+        ev.stopPropagation();
+        ev.preventDefault();
+        A.connectMode = true;
+        A.connectFrom = s.id;
+      });
+      g.appendChild(handle);
+    }
+
     gStates.appendChild(g);
 
     // seta inicial tangente à borda
@@ -425,6 +446,7 @@ function renderStates(){
 
     // eventos
     g.addEventListener('mousedown', (ev)=>{
+      if (ev.detail === 2) return; // evitar arrastar ao renomear
       ev.preventDefault();
       const sid = s.id;
       if (A.connectMode){
@@ -436,14 +458,26 @@ function renderStates(){
           if (!A.alphabet.size){
             alert('Defina Σ (alfabeto) primeiro.');
             A.connectFrom = null;
+            A.connectMode = false;
             return;
           }
           promptSymbolAndCreate(from,to);
           A.connectFrom = null;
+          A.connectMode = false;
         }
       }else{
         markSelected(sid);
         startDrag(ev, sid);
+      }
+    });
+
+    g.addEventListener('dblclick', (ev)=>{
+      ev.stopPropagation();
+      const newName = prompt('Novo nome do estado:', s.name);
+      if (newName && newName.trim() !== '') {
+        s.name = newName.trim();
+        saveLS();
+        renderAll();
       }
     });
   }
@@ -780,21 +814,6 @@ if(!loadLS()){
   saveLS();
 }
 
-// --- Renomear estados com duplo clique ---
-gStates.addEventListener('dblclick', (ev) => {
-  const target = ev.target.closest('.state');
-  if (!target) return;
-  const sid = target.getAttribute('data-id');
-  const st = A.states.get(sid);
-  if (!st) return;
-  const newName = prompt('Novo nome do estado:', st.name);
-  if (newName && newName.trim() !== '') {
-    st.name = newName.trim();
-    saveLS();
-    renderAll();
-  }
-});
-
 // --- União/Interseção ---
 
 function removeUnreachableStates(obj) {
@@ -815,20 +834,6 @@ function removeUnreachableStates(obj) {
   });
   return obj;
 }
-
-gStates.addEventListener('dblclick', (ev) => {
-  const target = ev.target.closest('.state');
-  if (!target) return;
-  const sid = target.getAttribute('data-id');
-  const st = A.states.get(sid);
-  if (!st) return;
-  const newName = prompt('Novo nome do estado:', st.name);
-  if (newName && newName.trim() !== '') {
-    st.name = newName.trim();
-    saveLS();
-    renderAll();
-  }
-});
 
 function combineAFDs(obj1, obj2, op) {
   if (JSON.stringify(obj1.alphabet) !== JSON.stringify(obj2.alphabet)) {
