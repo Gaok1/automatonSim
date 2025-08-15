@@ -897,7 +897,7 @@
 
       for (const k of statesOrder) {
         const Rkk = G[k][k] || null;
-        const starK = Rkk ? star(Rkk) : null;
+        const starK = star(Rkk);
         for (let i = 0; i < N; i++) {
           if (i === k) continue;
           const Rik = G[i][k] || null;
