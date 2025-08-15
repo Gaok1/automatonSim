@@ -355,7 +355,7 @@
       <div>
         <h2>Expressão Regular (AFD → ER)</h2>
         <div class="row">
-          <label><input type="checkbox" id="allowEpsilon" /> Permitir ε na saída</label>
+          <label><input type="checkbox" id="allowEpsilon" /> Permitir λ na saída</label>
           <button id="buildRegexBtn">Gerar ER</button>
         </div>
         <div id="regexMsg" class="mini muted"></div>
@@ -889,8 +889,8 @@
       const N = n + 2, Saux = n, Faux = n + 1;
       let G = Array.from({ length: N }, _ => Array.from({ length: N }, _ => null));
       for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if (R[i][j]) G[i][j] = R[i][j];
-      G[Saux][init] = 'ε';
-      for (const j of fins) G[j][Faux] = union(G[j][Faux], 'ε');
+      G[Saux][init] = 'λ';
+      for (const j of fins) G[j][Faux] = union(G[j][Faux], 'λ');
 
       const statesOrder = [];
       for (let k = 0; k < N; k++) if (k !== Saux && k !== Faux) statesOrder.push(k);
@@ -922,8 +922,8 @@
       Rfinal = simplify(Rfinal);
 
       if (!allowEps) {
-        if (Rfinal.includes('ε')) {
-          msg.push(`<span class="warn">A expressão exata envolve ε. Como você desativou “Permitir ε”, tentei remover/absorver ε por álgebra básica; se não foi possível sem alterar a linguagem, o resultado foi omitido.</span>`);
+        if (Rfinal.includes('λ')) {
+          msg.push(`<span class="warn">A expressão exata envolve λ. Como você desativou “Permitir λ”, tentei remover/absorver λ por álgebra básica; se não foi possível sem alterar a linguagem, o resultado foi omitido.</span>`);
           const noEps = dropEpsilonIfSafe(Rfinal);
           if (noEps === null) {
             return { output: '', msg: msg.join('<br>') };
@@ -943,11 +943,11 @@
     /* -------------------- Álgebra de regex -------------------- */
     function isNull(x) { return x === null || x === '∅'; }
 
-    function isEps(x) { return x === 'ε'; }
+    function isEps(x) { return x === 'λ'; }
 
     function par(x) {
       if (!x) return null;
-      if (/^[A-Za-z0-9]$/.test(x) || x === 'ε') return x;
+      if (/^[A-Za-z0-9]$/.test(x) || x === 'λ') return x;
       if (x.endsWith('*') && balanced(x.slice(0, -1))) return x;
       return `(${x})`;
     }
@@ -971,15 +971,15 @@
 
     function needsPar(x, ctx) {
       const hasUnion = x.includes(' ∪ ');
-      const simpleAtom = /^[A-Za-z0-9]$/.test(x) || x === 'ε' || (x.endsWith('*') && balanced(x.slice(0, -1)));
+      const simpleAtom = /^[A-Za-z0-9]$/.test(x) || x === 'λ' || (x.endsWith('*') && balanced(x.slice(0, -1)));
       if (simpleAtom) return x;
       if (ctx === 'concat' && hasUnion) return `(${x})`;
       return `(${x})`;
     }
 
     function star(x) {
-      if (isNull(x)) return 'ε';
-      if (isEps(x)) return 'ε';
+      if (isNull(x)) return 'λ';
+      if (isEps(x)) return 'λ';
       if (x.endsWith('*')) return x;
       return `${needsPar(x)}*`;
     }
@@ -1013,17 +1013,17 @@
     }
 
     function dropEpsilonIfSafe(r) {
-      if (!r.includes('ε')) return r;
+      if (!r.includes('λ')) return r;
       const parts = splitTopUnion(r);
-      const hasEps = parts.includes('ε');
+      const hasEps = parts.includes('λ');
       if (hasEps) {
-        const others = parts.filter(p => p !== 'ε');
+        const others = parts.filter(p => p !== 'λ');
         if (others.length === 0) { return null; }
         const someStar = others.some(p => p.endsWith('*'));
         if (someStar) { return simplify(others.join(' ∪ ')); }
         return null;
       }
-      return r.replaceAll('ε', '');
+      return r.replaceAll('λ', '');
     }
     function onlyAllowedTokens(r) { return /^[A-Za-z0-9 ()∪*]+$/.test(r); }
 
