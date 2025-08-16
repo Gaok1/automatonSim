@@ -38,8 +38,16 @@
       return Array.from(A.alphabet).join(', ');
     }
     function markSelected(id) {
+      const prev = A.selectedStateId;
       A.selectedStateId = id;
-      renderStates();
+
+      if (prev && prev !== id) {
+        const prevCircle = gStates.querySelector(`g.state[data-id="${prev}"] circle`);
+        if (prevCircle) prevCircle.style.stroke = '';
+      }
+
+      const circle = gStates.querySelector(`g.state[data-id="${id}"] circle`);
+      if (circle) circle.style.stroke = 'var(--accent)';
     }
     function ensureUniqueSymbols(str) {
       return Array.from(new Set(str.split(',').map(s => s.trim()).filter(Boolean)));
