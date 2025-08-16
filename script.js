@@ -10,7 +10,7 @@
       initialId: undefined,
     };
 
-    const LS_KEY = 'afd_sim_state_v3';
+    const LS_KEY = window.LS_KEY || 'afd_sim_state_v3';
 
     const svg = document.getElementById('svg');
     const gStates = document.getElementById('states');
