@@ -20,13 +20,9 @@
 
     const elAlphabetView = document.getElementById('alphabetView');
     const elTransitionsList = document.getElementById('transitionsList');
-    const elRunResult = document.getElementById('runResult');
-    const elRunSteps = document.getElementById('runSteps');
-    const runStartBtn = document.getElementById('runStartBtn');
-    const runStepBtn = document.getElementById('runStepBtn');
     const elRegexOut = document.getElementById('regexOut');
     const elRegexMsg = document.getElementById('regexMsg');
-    let stepRun = null;
+    let runHighlight = { stateId: null, status: null };
     document.getElementById('unionBtn').onclick = () => importTwoAndCombine('union');
     document.getElementById('intersectionBtn').onclick = () => importTwoAndCombine('intersection');
 
@@ -220,7 +216,11 @@
         circle.setAttribute('cy', s.y);
         circle.setAttribute('r', r);
         circle.setAttribute('class', 'st-circle' + (s.isFinal ? ' final' : ''));
-        if (A.selectedStateId === s.id) circle.style.stroke = 'var(--accent)';
+        if (runHighlight.stateId === s.id && runHighlight.status) {
+          circle.classList.add(runHighlight.status);
+        } else if (A.selectedStateId === s.id) {
+          circle.style.stroke = 'var(--accent)';
+        }
 
         const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         label.setAttribute('x', s.x);
@@ -233,7 +233,9 @@
         g.appendChild(label);
 
         if (A.selectedStateId === s.id) {
-          circle.style.stroke = 'var(--accent)';
+          if (runHighlight.stateId !== s.id) {
+            circle.style.stroke = 'var(--accent)';
+          }
           const handle = document.createElementNS('http://www.w3.org/2000/svg', 'path');
           handle.setAttribute('d', 'M19.902 4.098a3.75 3.75 0 0 0-5.304 0l-4.5 4.5a3.75 3.75 0 0 0 1.035 6.037.75.75 0 0 1-.646 1.353 5.25 5.25 0 0 1-1.449-8.45l4.5-4.5a5.25 5.25 0 1 1 7.424 7.424l-1.757 1.757a.75.75 0 1 1-1.06-1.06l1.757-1.757a3.75 3.75 0 0 0 0-5.304Zm-7.389 4.267a.75.75 0 0 1 1-.353 5.25 5.25 0 0 1 1.449 8.45l-4.5 4.5a5.25 5.25 0 1 1-7.424-7.424l1.757-1.757a.75.75 0 1 1 1.06 1.06l-1.757 1.757a3.75 3.75 0 1 0 5.304 5.304l4.5-4.5a3.75 3.75 0 0 0-1.035-6.037.75.75 0 0 1-.354-1Z');
           handle.setAttribute('class', 'connect-handle');
@@ -414,99 +416,6 @@
     function renderAll() {
       renderStates();
       renderEdges();
-    }
-
-    /* -------------------- Simulação (com HALT) -------------------- */
-    document.getElementById('runBtn').onclick = () => {
-      elRunSteps.innerHTML = ''; elRunResult.innerHTML = '';
-      const w = (document.getElementById('wordInput').value || '').trim().split('');
-      if (!A.initialId) { elRunResult.innerHTML = `<span class="warn">Defina um estado inicial.</span>`; return; }
-      if (!A.alphabet.size) { elRunResult.innerHTML = `<span class="warn">Defina Σ.</span>`; return; }
-      for (const c of w) if (!A.alphabet.has(c)) {
-        elRunResult.innerHTML = `<span class="err">HALT: símbolo "${c}" não pertence a Σ = { ${alphaStr()} }.</span>`;
-        return;
-      }
-      let cur = A.initialId;
-      addStep(`Início em ${A.states.get(cur).name}`);
-      for (const c of w) {
-        const k = keyTS(cur, c);
-        if (!A.transitions.has(k)) {
-          elRunResult.innerHTML = `<span class="err">HALT: transição não definida para (${A.states.get(cur).name}, ${c})</span>`;
-          markSelected(cur);
-          return;
-        }
-        const nxt = A.transitions.get(k);
-        addStep(`(${A.states.get(cur).name}, ${c}) → ${A.states.get(nxt).name}`);
-        cur = nxt;
-      }
-      const acc = A.states.get(cur)?.isFinal;
-      if (acc) {
-        elRunResult.innerHTML = `<span class="ok">ACEITA</span> (terminou em estado final ${A.states.get(cur).name})`;
-      } else {
-        elRunResult.innerHTML = `<span class="err">REJEITADA</span> (terminou em estado não-final ${A.states.get(cur).name})`;
-      }
-      markSelected(cur);
-    };
-
-    runStartBtn.onclick = () => {
-      elRunSteps.innerHTML = ''; elRunResult.innerHTML = '';
-      if (!A.initialId) { elRunResult.innerHTML = `<span class="warn">Defina um estado inicial.</span>`; return; }
-      if (!A.alphabet.size) { elRunResult.innerHTML = `<span class="warn">Defina Σ.</span>`; return; }
-      const word = (document.getElementById('wordInput').value || '').trim().split('');
-      stepRun = { word, pos: 0, cur: A.initialId, halted: false };
-      addStep(`Início em ${A.states.get(stepRun.cur).name}`);
-      markSelected(stepRun.cur);
-      if (stepRun.word.length === 0) {
-        const acc = A.states.get(stepRun.cur)?.isFinal;
-        if (acc) {
-          elRunResult.innerHTML = `<span class="ok">ACEITA</span> (terminou em estado final ${A.states.get(stepRun.cur).name})`;
-        } else {
-          elRunResult.innerHTML = `<span class="err">REJEITADA</span> (terminou em estado não-final ${A.states.get(stepRun.cur).name})`;
-        }
-        stepRun = null;
-        runStepBtn.disabled = true;
-      } else {
-        runStepBtn.disabled = false;
-      }
-    };
-
-    runStepBtn.onclick = () => {
-      if (!stepRun || stepRun.halted) return;
-      if (stepRun.pos >= stepRun.word.length) return;
-      const c = stepRun.word[stepRun.pos];
-      if (!A.alphabet.has(c)) {
-        elRunResult.innerHTML = `<span class="err">HALT: símbolo "${c}" não pertence a Σ = { ${alphaStr()} }.</span>`;
-        runStepBtn.disabled = true;
-        stepRun.halted = true;
-        return;
-      }
-      const k = keyTS(stepRun.cur, c);
-      if (!A.transitions.has(k)) {
-        elRunResult.innerHTML = `<span class="err">HALT: transição não definida para (${A.states.get(stepRun.cur).name}, ${c})</span>`;
-        runStepBtn.disabled = true;
-        stepRun.halted = true;
-        markSelected(stepRun.cur);
-        return;
-      }
-      const nxt = A.transitions.get(k);
-      addStep(`(${A.states.get(stepRun.cur).name}, ${c}) → ${A.states.get(nxt).name}`);
-      stepRun.cur = nxt;
-      stepRun.pos++;
-      markSelected(stepRun.cur);
-      if (stepRun.pos >= stepRun.word.length) {
-        const acc = A.states.get(stepRun.cur)?.isFinal;
-        if (acc) {
-          elRunResult.innerHTML = `<span class="ok">ACEITA</span> (terminou em estado final ${A.states.get(stepRun.cur).name})`;
-        } else {
-          elRunResult.innerHTML = `<span class="err">REJEITADA</span> (terminou em estado não-final ${A.states.get(stepRun.cur).name})`;
-        }
-        runStepBtn.disabled = true;
-        stepRun = null;
-      }
-    };
-
-    function addStep(t) {
-      const div = document.createElement('div'); div.textContent = t; elRunSteps.appendChild(div);
     }
 
     /* -------------------- Conversão DFA → ER (eliminação de estados) -------------------- */
