@@ -6,11 +6,11 @@
       selectedStateId: null,
       connectMode: false,
       connectFrom: null,            // id origem na conexão
-      transitions: new Map(),       // key: src|sym -> dest
+      transitions: new Map(),       // key: src|sym -> Set(dest)
       initialId: undefined,
     };
 
-    const LS_KEY = 'afd_sim_state_v2';
+    const LS_KEY = 'afd_sim_state_v3';
 
     const svg = document.getElementById('svg');
     const gStates = document.getElementById('states');
@@ -22,7 +22,7 @@
     const elTransitionsList = document.getElementById('transitionsList');
     const elRegexOut = document.getElementById('regexOut');
     const elRegexMsg = document.getElementById('regexMsg');
-    let runHighlight = { stateId: null, status: null };
+    let runHighlight = new Map();
     document.getElementById('unionBtn').onclick = () => importTwoAndCombine('union');
     document.getElementById('intersectionBtn').onclick = () => importTwoAndCombine('intersection');
 
@@ -47,11 +47,11 @@
     /* -------------------- Persistência -------------------- */
     function snapshot() {
       return {
-        version: 2,
+        version: 3,
         alphabet: Array.from(A.alphabet),
         states: Array.from(A.states.values()).map(s => ({ id: s.id, name: s.name, x: s.x, y: s.y, isInitial: s.isInitial, isFinal: s.isFinal })),
         nextId: A.nextId,
-        transitions: Array.from(A.transitions.entries()),
+        transitions: Array.from(A.transitions.entries()).map(([k, set]) => [k, Array.from(set)]),
         initialId: A.initialId,
       };
     }
@@ -116,9 +116,13 @@
     document.getElementById('deleteSelectedBtn').onclick = () => {
       if (!A.selectedStateId) return;
       const sid = A.selectedStateId;
-      for (const [k, v] of Array.from(A.transitions.entries())) {
+      for (const [k, set] of Array.from(A.transitions.entries())) {
         const [src] = k.split('|');
-        if (src === sid || v === sid) A.transitions.delete(k);
+        if (src === sid) { A.transitions.delete(k); continue; }
+        if (set.has(sid)) {
+          set.delete(sid);
+          if (set.size === 0) A.transitions.delete(k);
+        }
       }
       A.states.delete(sid);
       if (A.initialId === sid) A.initialId = undefined;
@@ -194,8 +198,10 @@
       if (Array.isArray(obj.transitions)) {
         for (const [k, v] of obj.transitions) {
           const [src, sym] = String(k).split('|');
-          if (!ids.has(src) || !ids.has(v)) continue; // ignora lixo
-          A.transitions.set(k, v);
+          if (!ids.has(src)) continue;
+          const dests = Array.isArray(v) ? v : [v];
+          const valid = dests.filter(d => ids.has(d));
+          if (valid.length) A.transitions.set(k, new Set(valid));
         }
       }
       elAlphabetView.textContent = `Σ = { ${alphaStr()} }`;
@@ -216,8 +222,9 @@
         circle.setAttribute('cy', s.y);
         circle.setAttribute('r', r);
         circle.setAttribute('class', 'st-circle' + (s.isFinal ? ' final' : ''));
-        if (runHighlight.stateId === s.id && runHighlight.status) {
-          circle.classList.add(runHighlight.status);
+        const hl = runHighlight.get(s.id);
+        if (hl) {
+          circle.classList.add(hl);
         } else if (A.selectedStateId === s.id) {
           circle.style.stroke = 'var(--accent)';
         }
@@ -233,7 +240,7 @@
         g.appendChild(label);
 
         if (A.selectedStateId === s.id) {
-          if (runHighlight.stateId !== s.id) {
+          if (!runHighlight.has(s.id)) {
             circle.style.stroke = 'var(--accent)';
           }
           const handle = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -332,26 +339,25 @@
       const syms = Array.from(A.alphabet);
       const sym = window.prompt(`Símbolo da transição ${A.states.get(from).name} → ${A.states.get(to).name}\nΣ = { ${syms.join(', ')} }`);
       if (!sym) return;
-      if (!A.alphabet.has(sym)) {
-        alert('Símbolo não pertence a Σ.');
+      if (sym !== 'λ' && !A.alphabet.has(sym)) {
+        alert('Símbolo não pertence a Σ. Use λ para transições vazias.');
         return;
       }
       const k = keyTS(from, sym);
-      if (A.transitions.has(k) && A.transitions.get(k) !== to) {
-        alert(`AFD é determinístico: já existe transição (${A.states.get(from).name}, ${sym}) → ${A.states.get(A.transitions.get(k)).name}`);
-        return;
-      }
-      A.transitions.set(k, to);
+      if (!A.transitions.has(k)) A.transitions.set(k, new Set());
+      A.transitions.get(k).add(to);
       renderAll(); saveLS();
     }
 
     function groupEdges() {
       const map = new Map();
-      for (const [k, to] of A.transitions.entries()) {
+      for (const [k, dests] of A.transitions.entries()) {
         const [src, sym] = k.split('|');
-        const gk = `${src}|${to}`;
-        if (!map.has(gk)) map.set(gk, { src, to, syms: [] });
-        map.get(gk).syms.push(sym);
+        for (const to of dests) {
+          const gk = `${src}|${to}`;
+          if (!map.has(gk)) map.set(gk, { src, to, syms: [] });
+          map.get(gk).syms.push(sym);
+        }
       }
       return Array.from(map.values());
     }
@@ -402,13 +408,19 @@
         gLabels.appendChild(t);
       }
       elTransitionsList.innerHTML = '';
-      for (const [k, to] of A.transitions.entries()) {
+      for (const [k, dests] of A.transitions.entries()) {
         const [src, sym] = k.split('|');
-        const item = document.createElement('div');
-        item.innerHTML = `<span class="kbd">${A.states.get(src)?.name || src}</span> , <span class="kbd">${sym}</span> → <span class="kbd">${A.states.get(to)?.name || to}</span>
+        for (const to of dests) {
+          const item = document.createElement('div');
+          item.innerHTML = `<span class="kbd">${A.states.get(src)?.name || src}</span> , <span class="kbd">${sym}</span> → <span class="kbd">${A.states.get(to)?.name || to}</span>
       <button class="mini btn-danger" style="margin-left:8px">remover</button>`;
-        item.querySelector('button').onclick = () => { A.transitions.delete(k); renderAll(); saveLS(); };
-        elTransitionsList.appendChild(item);
+          item.querySelector('button').onclick = () => {
+            dests.delete(to);
+            if (!dests.size) A.transitions.delete(k);
+            renderAll(); saveLS();
+          };
+          elTransitionsList.appendChild(item);
+        }
       }
     }
 
@@ -437,10 +449,12 @@
       const idx = new Map(); states.forEach((s, i) => idx.set(s, i));
       const n = states.length;
       let R = Array.from({ length: n }, _ => Array.from({ length: n }, _ => null));
-      for (const [k, to] of A.transitions.entries()) {
+      for (const [k, dests] of A.transitions.entries()) {
         const [src, sym] = k.split('|');
-        const i = idx.get(src), j = idx.get(to);
-        R[i][j] = R[i][j] ? union(R[i][j], sym) : sym;
+        for (const to of dests) {
+          const i = idx.get(src), j = idx.get(to);
+          R[i][j] = R[i][j] ? union(R[i][j], sym) : sym;
+        }
       }
       const init = idx.get(A.initialId);
       const fins = finals.map(f => idx.get(f));
@@ -593,8 +607,8 @@
       const s0 = { id: id(), name: 'q0', x: 180, y: 200, isInitial: true, isFinal: false };
       const s1 = { id: id(), name: 'q1', x: 380, y: 200, isInitial: false, isFinal: true };
       A.states.set(s0.id, s0); A.states.set(s1.id, s1); A.initialId = s0.id; A.selectedStateId = s0.id;
-      A.transitions.set(keyTS(s0.id, 'A'), s1.id);
-      A.transitions.set(keyTS(s1.id, 'B'), s0.id);
+      A.transitions.set(keyTS(s0.id, 'A'), new Set([s1.id]));
+      A.transitions.set(keyTS(s1.id, 'B'), new Set([s0.id]));
       saveLS();
     }
 
@@ -607,15 +621,17 @@
         reachable.add(stateId);
         for (const [k, dest] of obj.transitions) {
           const [from] = k.split('|');
-          if (from === stateId) dfs(dest);
+          if (from === stateId) {
+            const arr = Array.isArray(dest) ? dest : [dest];
+            arr.forEach(dfs);
+          }
         }
       }
       dfs(obj.initialId);
       obj.states = obj.states.filter(s => reachable.has(s.id));
-      obj.transitions = obj.transitions.filter(([k, v]) => {
-        const [from] = k.split('|');
-        return reachable.has(from) && reachable.has(v);
-      });
+      obj.transitions = obj.transitions
+        .map(([k, v]) => [k, (Array.isArray(v) ? v : [v]).filter(d => reachable.has(d))])
+        .filter(([k, arr]) => arr.length > 0);
       return obj;
     }
 

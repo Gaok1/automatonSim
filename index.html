@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8" />
-  <title>Simulador Interativo de AFD</title>
+  <title>Simulador Interativo de AF</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="style.css">
 </head>
@@ -29,7 +29,7 @@
         <button id="toggleInitialBtn" class="btn-soft">Alternar Inicial</button>
         <button id="toggleFinalBtn" class="btn-soft">Alternar Final</button>
         <button id="deleteSelectedBtn" class="btn-danger">Excluir Selecionado</button>
-        <button id="resetBtn" class="btn-danger">Limpar AFD</button>
+        <button id="resetBtn" class="btn-danger">Limpar AF</button>
       </div>
       <div class="legend">
         <span class="dot dot-initial"></span><span class="mini">Inicial</span>
@@ -67,12 +67,12 @@
     <div class="card">
       <h2>Exportar / Importar</h2>
       <div class="toolbar">
-        <button id="exportBtn" class="btn-soft">Exportar AFD</button>
-        <button id="importBtn" class="btn-soft">Importar AFD</button>
+        <button id="exportBtn" class="btn-soft">Exportar AF</button>
+        <button id="importBtn" class="btn-soft">Importar AF</button>
         <input type="file" id="importFile" accept="application/json" style="display:none" />
       </div>
       <div class="mini muted">Exporta um JSON com Σ, estados, transições, inicial e <code>nextId</code>. Importar
-        substituirá o AFD atual.</div>
+        substituirá o AF atual.</div>
     </div>
   </div>
 
