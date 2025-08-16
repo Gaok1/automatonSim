@@ -11,6 +11,7 @@
     };
 
     const LS_KEY = window.LS_KEY || 'afd_sim_state_v3';
+    const IS_AFN = LS_KEY.startsWith('afn');
 
     const svg = document.getElementById('svg');
     const gStates = document.getElementById('states');
@@ -199,9 +200,12 @@
         for (const [k, v] of obj.transitions) {
           const [src, sym] = String(k).split('|');
           if (!ids.has(src)) continue;
+          if (!IS_AFN && sym === 'λ') continue;
           const dests = Array.isArray(v) ? v : [v];
           const valid = dests.filter(d => ids.has(d));
-          if (valid.length) A.transitions.set(k, new Set(valid));
+          if (!valid.length) continue;
+          const chosen = !IS_AFN && valid.length > 1 ? [valid[0]] : valid;
+          A.transitions.set(k, new Set(chosen));
         }
       }
       elAlphabetView.textContent = `Σ = { ${alphaStr()} }`;
@@ -339,11 +343,19 @@
       const syms = Array.from(A.alphabet);
       const sym = window.prompt(`Símbolo da transição ${A.states.get(from).name} → ${A.states.get(to).name}\nΣ = { ${syms.join(', ')} }`);
       if (!sym) return;
+      if (!IS_AFN && sym === 'λ') {
+        alert('AFDs não permitem transições λ.');
+        return;
+      }
       if (sym !== 'λ' && !A.alphabet.has(sym)) {
         alert('Símbolo não pertence a Σ. Use λ para transições vazias.');
         return;
       }
       const k = keyTS(from, sym);
+      if (!IS_AFN && A.transitions.has(k) && A.transitions.get(k).size > 0) {
+        alert('Autômatos determinísticos não permitem mais de uma transição por símbolo.');
+        return;
+      }
       if (!A.transitions.has(k)) A.transitions.set(k, new Set());
       A.transitions.get(k).add(to);
       renderAll(); saveLS();
