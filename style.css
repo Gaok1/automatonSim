@@ -194,6 +194,21 @@
       stroke-width: 3.5
     }
 
+    .st-circle.running {
+      stroke: var(--warn);
+      fill: rgba(251, 191, 36, .2);
+    }
+
+    .st-circle.accepted {
+      stroke: var(--ok);
+      fill: rgba(52, 211, 153, .2);
+    }
+
+    .st-circle.rejected {
+      stroke: var(--danger);
+      fill: rgba(251, 113, 133, .2);
+    }
+
     .st-label {
       fill: #e5e7eb;
       font-weight: 700;
