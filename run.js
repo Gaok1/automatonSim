@@ -6,13 +6,33 @@ const runStepBtn = document.getElementById('runStepBtn');
 let stepRun = null;
 
 function resetRunVisuals() {
-  runHighlight = { stateId: null, status: null };
+  runHighlight.clear();
   renderStates();
 }
 
-function setRunState(id, status) {
-  runHighlight = { stateId: id, status };
+function setRunStates(ids, status) {
+  runHighlight.clear();
+  ids.forEach(id => runHighlight.set(id, status));
   renderStates();
+}
+
+function namesOf(set) {
+  return Array.from(set).map(id => A.states.get(id)?.name || id).join(', ');
+}
+
+function epsilonClosure(states) {
+  const stack = Array.from(states);
+  const closure = new Set(states);
+  while (stack.length) {
+    const s = stack.pop();
+    const k = keyTS(s, 'λ');
+    if (A.transitions.has(k)) {
+      for (const nxt of A.transitions.get(k)) {
+        if (!closure.has(nxt)) { closure.add(nxt); stack.push(nxt); }
+      }
+    }
+  }
+  return closure;
 }
 
 runBtn.onclick = () => {
@@ -24,31 +44,41 @@ runBtn.onclick = () => {
   if (!A.alphabet.size) { elRunResult.innerHTML = `<span class="warn">Defina Σ.</span>`; return; }
   for (const c of w) if (!A.alphabet.has(c)) {
     elRunResult.innerHTML = `<span class="err">HALT: símbolo \"${c}\" não pertence a Σ = { ${alphaStr()} }.</span>`;
-    setRunState(A.initialId, 'rejected');
+    setRunStates(new Set([A.initialId]), 'rejected');
     return;
   }
-  let cur = A.initialId;
-  addStep(`Início em ${A.states.get(cur).name}`);
-  setRunState(cur, 'running');
+  let cur = epsilonClosure(new Set([A.initialId]));
+  addStep(`Início em {${namesOf(cur)}}`);
+  setRunStates(cur, 'running');
   for (const c of w) {
-    const k = keyTS(cur, c);
-    if (!A.transitions.has(k)) {
-      elRunResult.innerHTML = `<span class="err">HALT: transição não definida para (${A.states.get(cur).name}, ${c})</span>`;
-      setRunState(cur, 'rejected');
+    let next = new Set();
+    for (const s of cur) {
+      const k = keyTS(s, c);
+      if (A.transitions.has(k)) {
+        for (const dest of A.transitions.get(k)) {
+          epsilonClosure(new Set([dest])).forEach(d => next.add(d));
+        }
+      }
+    }
+    if (next.size === 0) {
+      elRunResult.innerHTML = `<span class="err">HALT: transição não definida para ({${namesOf(cur)}}, ${c})</span>`;
+      setRunStates(cur, 'rejected');
       return;
     }
-    const nxt = A.transitions.get(k);
-    addStep(`(${A.states.get(cur).name}, ${c}) → ${A.states.get(nxt).name}`);
-    cur = nxt;
-    setRunState(cur, 'running');
+    addStep(`({${namesOf(cur)}}, ${c}) → {${namesOf(next)}}`);
+    cur = next;
+    setRunStates(cur, 'running');
   }
-  const acc = A.states.get(cur)?.isFinal;
-  if (acc) {
-    elRunResult.innerHTML = `<span class="ok">ACEITA</span> (terminou em estado final ${A.states.get(cur).name})`;
-    setRunState(cur, 'accepted');
+  const finals = new Set([...cur].filter(id => A.states.get(id)?.isFinal));
+  if (finals.size) {
+    elRunResult.innerHTML = `<span class="ok">ACEITA</span> (terminou em {${namesOf(finals)}})`;
+    runHighlight.clear();
+    finals.forEach(id => runHighlight.set(id, 'accepted'));
+    [...cur].filter(id => !finals.has(id)).forEach(id => runHighlight.set(id, 'rejected'));
+    renderStates();
   } else {
-    elRunResult.innerHTML = `<span class="err">REJEITADA</span> (terminou em estado não-final ${A.states.get(cur).name})`;
-    setRunState(cur, 'rejected');
+    elRunResult.innerHTML = `<span class="err">REJEITADA</span> (terminou em {${namesOf(cur)}})`;
+    setRunStates(cur, 'rejected');
   }
 };
 
@@ -59,17 +89,20 @@ runStartBtn.onclick = () => {
   if (!A.initialId) { elRunResult.innerHTML = `<span class="warn">Defina um estado inicial.</span>`; return; }
   if (!A.alphabet.size) { elRunResult.innerHTML = `<span class="warn">Defina Σ.</span>`; return; }
   const word = (document.getElementById('wordInput').value || '').trim().split('');
-  stepRun = { word, pos: 0, cur: A.initialId, halted: false };
-  addStep(`Início em ${A.states.get(stepRun.cur).name}`);
-  setRunState(stepRun.cur, 'running');
+  stepRun = { word, pos: 0, cur: epsilonClosure(new Set([A.initialId])), halted: false };
+  addStep(`Início em {${namesOf(stepRun.cur)}}`);
+  setRunStates(stepRun.cur, 'running');
   if (stepRun.word.length === 0) {
-    const acc = A.states.get(stepRun.cur)?.isFinal;
-    if (acc) {
-      elRunResult.innerHTML = `<span class="ok">ACEITA</span> (terminou em estado final ${A.states.get(stepRun.cur).name})`;
-      setRunState(stepRun.cur, 'accepted');
+    const finals = new Set([...stepRun.cur].filter(id => A.states.get(id)?.isFinal));
+    if (finals.size) {
+      elRunResult.innerHTML = `<span class="ok">ACEITA</span> (terminou em {${namesOf(finals)}})`;
+      runHighlight.clear();
+      finals.forEach(id => runHighlight.set(id, 'accepted'));
+      [...stepRun.cur].filter(id => !finals.has(id)).forEach(id => runHighlight.set(id, 'rejected'));
+      renderStates();
     } else {
-      elRunResult.innerHTML = `<span class="err">REJEITADA</span> (terminou em estado não-final ${A.states.get(stepRun.cur).name})`;
-      setRunState(stepRun.cur, 'rejected');
+      elRunResult.innerHTML = `<span class="err">REJEITADA</span> (terminou em {${namesOf(stepRun.cur)}})`;
+      setRunStates(stepRun.cur, 'rejected');
     }
     stepRun = null;
     runStepBtn.disabled = true;
@@ -86,30 +119,40 @@ runStepBtn.onclick = () => {
     elRunResult.innerHTML = `<span class="err">HALT: símbolo \"${c}\" não pertence a Σ = { ${alphaStr()} }.</span>`;
     runStepBtn.disabled = true;
     stepRun.halted = true;
-    setRunState(stepRun.cur, 'rejected');
+    setRunStates(stepRun.cur, 'rejected');
     return;
   }
-  const k = keyTS(stepRun.cur, c);
-  if (!A.transitions.has(k)) {
-    elRunResult.innerHTML = `<span class="err">HALT: transição não definida para (${A.states.get(stepRun.cur).name}, ${c})</span>`;
+  let next = new Set();
+  for (const s of stepRun.cur) {
+    const k = keyTS(s, c);
+    if (A.transitions.has(k)) {
+      for (const dest of A.transitions.get(k)) {
+        epsilonClosure(new Set([dest])).forEach(d => next.add(d));
+      }
+    }
+  }
+  if (next.size === 0) {
+    elRunResult.innerHTML = `<span class="err">HALT: transição não definida para ({${namesOf(stepRun.cur)}}, ${c})</span>`;
     runStepBtn.disabled = true;
     stepRun.halted = true;
-    setRunState(stepRun.cur, 'rejected');
+    setRunStates(stepRun.cur, 'rejected');
     return;
   }
-  const nxt = A.transitions.get(k);
-  addStep(`(${A.states.get(stepRun.cur).name}, ${c}) → ${A.states.get(nxt).name}`);
-  stepRun.cur = nxt;
+  addStep(`({${namesOf(stepRun.cur)}}, ${c}) → {${namesOf(next)}}`);
+  stepRun.cur = next;
   stepRun.pos++;
-  setRunState(stepRun.cur, 'running');
+  setRunStates(stepRun.cur, 'running');
   if (stepRun.pos >= stepRun.word.length) {
-    const acc = A.states.get(stepRun.cur)?.isFinal;
-    if (acc) {
-      elRunResult.innerHTML = `<span class="ok">ACEITA</span> (terminou em estado final ${A.states.get(stepRun.cur).name})`;
-      setRunState(stepRun.cur, 'accepted');
+    const finals = new Set([...stepRun.cur].filter(id => A.states.get(id)?.isFinal));
+    if (finals.size) {
+      elRunResult.innerHTML = `<span class="ok">ACEITA</span> (terminou em {${namesOf(finals)}})`;
+      runHighlight.clear();
+      finals.forEach(id => runHighlight.set(id, 'accepted'));
+      [...stepRun.cur].filter(id => !finals.has(id)).forEach(id => runHighlight.set(id, 'rejected'));
+      renderStates();
     } else {
-      elRunResult.innerHTML = `<span class="err">REJEITADA</span> (terminou em estado não-final ${A.states.get(stepRun.cur).name})`;
-      setRunState(stepRun.cur, 'rejected');
+      elRunResult.innerHTML = `<span class="err">REJEITADA</span> (terminou em {${namesOf(stepRun.cur)}})`;
+      setRunStates(stepRun.cur, 'rejected');
     }
     runStepBtn.disabled = true;
     stepRun = null;
