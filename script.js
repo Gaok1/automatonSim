@@ -22,8 +22,11 @@
     const elTransitionsList = document.getElementById('transitionsList');
     const elRunResult = document.getElementById('runResult');
     const elRunSteps = document.getElementById('runSteps');
+    const runStartBtn = document.getElementById('runStartBtn');
+    const runStepBtn = document.getElementById('runStepBtn');
     const elRegexOut = document.getElementById('regexOut');
     const elRegexMsg = document.getElementById('regexMsg');
+    let stepRun = null;
     document.getElementById('unionBtn').onclick = () => importTwoAndCombine('union');
     document.getElementById('intersectionBtn').onclick = () => importTwoAndCombine('intersection');
 
@@ -443,6 +446,63 @@
         elRunResult.innerHTML = `<span class="err">REJEITADA</span> (terminou em estado não-final ${A.states.get(cur).name})`;
       }
       markSelected(cur);
+    };
+
+    runStartBtn.onclick = () => {
+      elRunSteps.innerHTML = ''; elRunResult.innerHTML = '';
+      if (!A.initialId) { elRunResult.innerHTML = `<span class="warn">Defina um estado inicial.</span>`; return; }
+      if (!A.alphabet.size) { elRunResult.innerHTML = `<span class="warn">Defina Σ.</span>`; return; }
+      const word = (document.getElementById('wordInput').value || '').trim().split('');
+      stepRun = { word, pos: 0, cur: A.initialId, halted: false };
+      addStep(`Início em ${A.states.get(stepRun.cur).name}`);
+      markSelected(stepRun.cur);
+      if (stepRun.word.length === 0) {
+        const acc = A.states.get(stepRun.cur)?.isFinal;
+        if (acc) {
+          elRunResult.innerHTML = `<span class="ok">ACEITA</span> (terminou em estado final ${A.states.get(stepRun.cur).name})`;
+        } else {
+          elRunResult.innerHTML = `<span class="err">REJEITADA</span> (terminou em estado não-final ${A.states.get(stepRun.cur).name})`;
+        }
+        stepRun = null;
+        runStepBtn.disabled = true;
+      } else {
+        runStepBtn.disabled = false;
+      }
+    };
+
+    runStepBtn.onclick = () => {
+      if (!stepRun || stepRun.halted) return;
+      if (stepRun.pos >= stepRun.word.length) return;
+      const c = stepRun.word[stepRun.pos];
+      if (!A.alphabet.has(c)) {
+        elRunResult.innerHTML = `<span class="err">HALT: símbolo "${c}" não pertence a Σ = { ${alphaStr()} }.</span>`;
+        runStepBtn.disabled = true;
+        stepRun.halted = true;
+        return;
+      }
+      const k = keyTS(stepRun.cur, c);
+      if (!A.transitions.has(k)) {
+        elRunResult.innerHTML = `<span class="err">HALT: transição não definida para (${A.states.get(stepRun.cur).name}, ${c})</span>`;
+        runStepBtn.disabled = true;
+        stepRun.halted = true;
+        markSelected(stepRun.cur);
+        return;
+      }
+      const nxt = A.transitions.get(k);
+      addStep(`(${A.states.get(stepRun.cur).name}, ${c}) → ${A.states.get(nxt).name}`);
+      stepRun.cur = nxt;
+      stepRun.pos++;
+      markSelected(stepRun.cur);
+      if (stepRun.pos >= stepRun.word.length) {
+        const acc = A.states.get(stepRun.cur)?.isFinal;
+        if (acc) {
+          elRunResult.innerHTML = `<span class="ok">ACEITA</span> (terminou em estado final ${A.states.get(stepRun.cur).name})`;
+        } else {
+          elRunResult.innerHTML = `<span class="err">REJEITADA</span> (terminou em estado não-final ${A.states.get(stepRun.cur).name})`;
+        }
+        runStepBtn.disabled = true;
+        stepRun = null;
+      }
     };
 
     function addStep(t) {
