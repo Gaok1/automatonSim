@@ -243,6 +243,13 @@
     }
 
     .connect-handle {
+      fill: var(--accent2);
+      stroke: var(--bg);
+      stroke-width: 2;
+      cursor: pointer
+    }
+
+    .rename-handle {
       fill: var(--accent);
       stroke: var(--bg);
       stroke-width: 2;
