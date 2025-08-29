@@ -365,8 +365,11 @@
     /* -------------------- Transições -------------------- */
     function promptSymbolAndCreate(from, to) {
       const syms = Array.from(A.alphabet);
-      const sym = window.prompt(`Símbolo da transição ${A.states.get(from).name} → ${A.states.get(to).name}\nΣ = { ${syms.join(', ')} }`);
-      if (!sym) return;
+      const raw = window.prompt(`Símbolo da transição ${A.states.get(from).name} → ${A.states.get(to).name}\nΣ = { ${syms.join(', ')} }`, IS_AFN ? 'λ' : '');
+      if (raw === null) return;
+      let sym = raw.trim();
+      if (IS_AFN && sym === '') sym = 'λ';
+      if (sym === '') return;
       if (!IS_AFN && sym === 'λ') {
         alert('AFDs não permitem transições λ.');
         return;
