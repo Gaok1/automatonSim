@@ -732,5 +732,125 @@
       file1.click();
     }
 
+    /* -------------------- Conversões -------------------- */
+    function epsilonClosure(states, trans) {
+      const stack = Array.from(states);
+      const closure = new Set(states);
+      while (stack.length) {
+        const s = stack.pop();
+        const k = keyTS(s, 'λ');
+        if (trans.has(k)) {
+          for (const nxt of trans.get(k)) {
+            if (!closure.has(nxt)) { closure.add(nxt); stack.push(nxt); }
+          }
+        }
+      }
+      return closure;
+    }
+
+    function removeLambdaTransitions() {
+      const closures = new Map();
+      for (const id of A.states.keys()) {
+        closures.set(id, epsilonClosure(new Set([id]), A.transitions));
+      }
+      for (const s of A.states.values()) {
+        s.isFinal = [...closures.get(s.id)].some(id => A.states.get(id)?.isFinal);
+      }
+      const newTrans = new Map();
+      for (const id of A.states.keys()) {
+        for (const sym of A.alphabet) {
+          if (sym === 'λ') continue;
+          const dests = new Set();
+          for (const q of closures.get(id)) {
+            const k = keyTS(q, sym);
+            if (A.transitions.has(k)) {
+              for (const d of A.transitions.get(k)) {
+                epsilonClosure(new Set([d]), A.transitions).forEach(x => dests.add(x));
+              }
+            }
+          }
+          if (dests.size) newTrans.set(keyTS(id, sym), dests);
+        }
+      }
+      A.transitions = newTrans;
+      A.alphabet.delete('λ');
+      elAlphabetView.textContent = `Σ = { ${alphaStr()} }`;
+      renderAll(); saveLS();
+    }
+
+    function convertNfaToDfa() {
+      for (const k of A.transitions.keys()) {
+        if (k.split('|')[1] === 'λ') {
+          alert('Remova transições λ antes de converter para AFD.');
+          return;
+        }
+      }
+      const old = snapshot();
+      const oldStates = new Map(old.states.map(s => [s.id, s]));
+      const oldTrans = new Map(old.transitions.map(([k, arr]) => [k, new Set(arr)]));
+      const alphabet = Array.from(A.alphabet);
+
+      function subsetKey(set) { return Array.from(set).sort().join(','); }
+      function subsetName(set) {
+        return '{' + Array.from(set).map(id => oldStates.get(id)?.name || id).join(',') + '}';
+      }
+
+      A.states.clear();
+      A.transitions.clear();
+      A.nextId = 0;
+
+      const subsetMap = new Map();
+      const queue = [];
+      function getIdFor(set) {
+        const key = subsetKey(set);
+        if (!subsetMap.has(key)) {
+          const sid = id();
+          const st = {
+            id: sid,
+            name: subsetName(set),
+            x: 120 + Math.random() * 320,
+            y: 120 + Math.random() * 220,
+            isInitial: false,
+            isFinal: [...set].some(s => oldStates.get(s)?.isFinal)
+          };
+          subsetMap.set(key, sid);
+          A.states.set(sid, st);
+          queue.push(set);
+        }
+        return subsetMap.get(key);
+      }
+
+      const startSet = new Set([old.initialId]);
+      const startId = getIdFor(startSet);
+      A.states.get(startId).isInitial = true;
+      A.initialId = startId;
+
+      while (queue.length) {
+        const set = queue.shift();
+        const fromId = getIdFor(set);
+        for (const sym of alphabet) {
+          const dest = new Set();
+          for (const s of set) {
+            const k = keyTS(s, sym);
+            if (oldTrans.has(k)) {
+              oldTrans.get(k).forEach(d => dest.add(d));
+            }
+          }
+          if (dest.size) {
+            const toId = getIdFor(dest);
+            if (!A.transitions.has(keyTS(fromId, sym))) A.transitions.set(keyTS(fromId, sym), new Set());
+            A.transitions.get(keyTS(fromId, sym)).add(toId);
+          }
+        }
+      }
+
+      renderAll(); saveLS();
+    }
+
+    const btnLambda = document.getElementById('lambdaToNfaBtn');
+    if (btnLambda) btnLambda.onclick = removeLambdaTransitions;
+    const btnDfa = document.getElementById('nfaToDfaBtn');
+    if (btnDfa) btnDfa.onclick = convertNfaToDfa;
+
     renderAll();
 
