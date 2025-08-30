@@ -790,7 +790,7 @@
         return subsetMap.get(key);
       }
 
-      const startSet = epsilonClosure(new Set([obj.initialId]), trans);
+      const startSet = epsilonClosureMap(new Set([obj.initialId]), trans);
       dfa.initialId = addState(startSet);
 
       while (queue.length) {
@@ -802,7 +802,7 @@
             const k = keyTS(s, sym);
             if (trans.has(k)) {
               for (const d of trans.get(k)) {
-                epsilonClosure(new Set([d]), trans).forEach(x => dest.add(x));
+                epsilonClosureMap(new Set([d]), trans).forEach(x => dest.add(x));
               }
             }
           }
@@ -841,7 +841,7 @@
     }
 
     /* -------------------- Conversões -------------------- */
-    function epsilonClosure(states, trans) {
+    function epsilonClosureMap(states, trans) {
       const stack = Array.from(states);
       const closure = new Set(states);
       while (stack.length) {
@@ -859,7 +859,7 @@
     function removeLambdaTransitions() {
       const closures = new Map();
       for (const id of A.states.keys()) {
-        closures.set(id, epsilonClosure(new Set([id]), A.transitions));
+        closures.set(id, epsilonClosureMap(new Set([id]), A.transitions));
       }
       for (const s of A.states.values()) {
         s.isFinal = [...closures.get(s.id)].some(id => A.states.get(id)?.isFinal);
@@ -873,7 +873,7 @@
             const k = keyTS(q, sym);
             if (A.transitions.has(k)) {
               for (const d of A.transitions.get(k)) {
-                epsilonClosure(new Set([d]), A.transitions).forEach(x => dests.add(x));
+                epsilonClosureMap(new Set([d]), A.transitions).forEach(x => dests.add(x));
               }
             }
           }
