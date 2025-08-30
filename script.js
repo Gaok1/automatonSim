@@ -26,6 +26,7 @@
     let runHighlight = new Map();
     document.getElementById('unionBtn').onclick = () => importTwoAndCombine('union');
     document.getElementById('intersectionBtn').onclick = () => importTwoAndCombine('intersection');
+    document.getElementById('equivalenceBtn').onclick = () => importTwoAndCheckEquivalence();
 
 
 
@@ -744,6 +745,99 @@
         reader.readAsText(file2.files[0]);
       };
       file1.click();
+    }
+
+    function importTwoAndCheckEquivalence() {
+      let data1 = null, data2 = null;
+      const file1 = document.getElementById('importFile1');
+      const file2 = document.getElementById('importFile2');
+      file1.onchange = () => {
+        const reader = new FileReader();
+        reader.onload = () => { data1 = JSON.parse(reader.result); file2.click(); };
+        reader.readAsText(file1.files[0]);
+      };
+      file2.onchange = () => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          data2 = JSON.parse(reader.result);
+          const eq = areEquivalent(data1, data2);
+          alert(eq ? 'Os autômatos são equivalentes!' : 'Os autômatos não são equivalentes.');
+        };
+        reader.readAsText(file2.files[0]);
+      };
+      file1.click();
+    }
+
+    function toDFA(obj) {
+      const states = new Map(obj.states.map(s => [s.id, s]));
+      const trans = new Map(obj.transitions.map(([k, arr]) => [k, new Set(Array.isArray(arr) ? arr : [arr])]));
+      const alphabet = new Set(obj.alphabet.filter(sym => sym !== 'λ'));
+      const dfa = { alphabet, states: new Map(), transitions: new Map(), initialId: '' };
+
+      function subsetKey(set) { return Array.from(set).sort().join(','); }
+
+      const subsetMap = new Map();
+      const queue = [];
+      function addState(set) {
+        const key = subsetKey(set);
+        if (!subsetMap.has(key)) {
+          const id = 'S' + subsetMap.size;
+          subsetMap.set(key, id);
+          const isFinal = [...set].some(x => states.get(x)?.isFinal);
+          dfa.states.set(id, { id, isFinal });
+          queue.push(set);
+        }
+        return subsetMap.get(key);
+      }
+
+      const startSet = epsilonClosure(new Set([obj.initialId]), trans);
+      dfa.initialId = addState(startSet);
+
+      while (queue.length) {
+        const set = queue.shift();
+        const fromId = addState(set);
+        for (const sym of alphabet) {
+          const dest = new Set();
+          for (const s of set) {
+            const k = keyTS(s, sym);
+            if (trans.has(k)) {
+              for (const d of trans.get(k)) {
+                epsilonClosure(new Set([d]), trans).forEach(x => dest.add(x));
+              }
+            }
+          }
+          if (dest.size) {
+            const toId = addState(dest);
+            dfa.transitions.set(keyTS(fromId, sym), toId);
+          }
+        }
+      }
+
+      return dfa;
+    }
+
+    function areEquivalent(obj1, obj2) {
+      const dfa1 = toDFA(obj1);
+      const dfa2 = toDFA(obj2);
+      const alpha = new Set([...dfa1.alphabet, ...dfa2.alphabet]);
+      const trap1 = '__trap1__', trap2 = '__trap2__';
+      const queue = [[dfa1.initialId || trap1, dfa2.initialId || trap2]];
+      const seen = new Set();
+      while (queue.length) {
+        const [s1, s2] = queue.shift();
+        const key = s1 + '|' + s2;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const f1 = dfa1.states.get(s1)?.isFinal || false;
+        const f2 = dfa2.states.get(s2)?.isFinal || false;
+        if (f1 !== f2) return false;
+        for (const sym of alpha) {
+          const n1 = s1 === trap1 ? trap1 : (dfa1.transitions.get(keyTS(s1, sym)) || trap1);
+          const n2 = s2 === trap2 ? trap2 : (dfa2.transitions.get(keyTS(s2, sym)) || trap2);
+          queue.push([n1, n2]);
+        }
+      }
+      return true;
     }
 
     /* -------------------- Conversões -------------------- */
