@@ -53,6 +53,14 @@
       return Array.from(new Set(str.split(',').map(s => s.trim()).filter(Boolean)));
     }
 
+    function setConnectMode(on, from = null) {
+      A.connectMode = on;
+      A.connectFrom = on ? from : null;
+      document.body.classList.toggle('connect-mode', on);
+      renderStates();
+      if (A.selectedStateId) markSelected(A.selectedStateId);
+    }
+
     /* -------------------- Persistência -------------------- */
     function snapshot() {
       return {
@@ -83,6 +91,7 @@
       A.transitions.clear();
       A.nextId = 0; A.initialId = undefined; A.selectedStateId = null; A.connectFrom = null; A.connectMode = false;
       elAlphabetView.textContent = 'Σ = { }';
+      document.body.classList.remove('connect-mode');
       renderAll();
     }
 
@@ -139,18 +148,16 @@
       renderAll(); saveLS();
     };
 
-    document.addEventListener('keydown', ev => {
-      if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA') return;
-      if (ev.key.toLowerCase() === 'c') {
-        if (A.connectMode) {
-          A.connectMode = false;
-          A.connectFrom = null;
-        } else {
-          A.connectMode = true;
-          A.connectFrom = A.selectedStateId || null;
+      document.addEventListener('keydown', ev => {
+        if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA') return;
+        if (ev.key.toLowerCase() === 'c') {
+          if (A.connectMode) {
+            setConnectMode(false);
+          } else {
+            setConnectMode(true, A.selectedStateId || null);
+          }
         }
-      }
-    });
+      });
 
     /* -------------------- Exportar / Importar -------------------- */
     const exportBtn = document.getElementById('exportBtn');
@@ -227,6 +234,9 @@
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         g.classList.add('state');
         g.setAttribute('data-id', s.id);
+        if (A.connectMode && A.connectFrom === s.id) {
+          g.classList.add('connect-from');
+        }
 
         const r = 24;
         const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -259,12 +269,11 @@
           handle.setAttribute('d', 'M19.902 4.098a3.75 3.75 0 0 0-5.304 0l-4.5 4.5a3.75 3.75 0 0 0 1.035 6.037.75.75 0 0 1-.646 1.353 5.25 5.25 0 0 1-1.449-8.45l4.5-4.5a5.25 5.25 0 1 1 7.424 7.424l-1.757 1.757a.75.75 0 1 1-1.06-1.06l1.757-1.757a3.75 3.75 0 0 0 0-5.304Zm-7.389 4.267a.75.75 0 0 1 1-.353 5.25 5.25 0 0 1 1.449 8.45l-4.5 4.5a5.25 5.25 0 1 1-7.424-7.424l1.757-1.757a.75.75 0 1 1 1.06 1.06l-1.757 1.757a3.75 3.75 0 1 0 5.304 5.304l4.5-4.5a3.75 3.75 0 0 0-1.035-6.037.75.75 0 0 1-.354-1Z');
           handle.setAttribute('class', 'connect-handle');
           handle.setAttribute('transform', `translate(${s.x + r + 6},${s.y - r - 22}) scale(0.66)`);
-          handle.addEventListener('mousedown', ev => {
-            ev.stopPropagation();
-            ev.preventDefault();
-            A.connectMode = true;
-            A.connectFrom = s.id;
-          });
+            handle.addEventListener('mousedown', ev => {
+              ev.stopPropagation();
+              ev.preventDefault();
+              setConnectMode(true, s.id);
+            });
           g.appendChild(handle);
 
           const renameHandle = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -298,32 +307,30 @@
         }
 
         // eventos
-        g.addEventListener('mousedown', (ev) => {
-          if (ev.detail === 2) return; // evitar arrastar ao renomear
-          ev.preventDefault();
-          const sid = s.id;
+          g.addEventListener('mousedown', (ev) => {
+            if (ev.detail === 2) return; // evitar arrastar ao renomear
+            ev.preventDefault();
+            const sid = s.id;
 
-          if (A.connectMode) {
-            if (!A.connectFrom) {
-              A.connectFrom = sid;
-              markSelected(sid);
-            } else {
-              const from = A.connectFrom, to = sid;
-              if (!A.alphabet.size) {
-                alert('Defina Σ (alfabeto) primeiro.');
-                A.connectFrom = null;
-                A.connectMode = false;
-                return;
+            if (A.connectMode) {
+              if (!A.connectFrom) {
+                setConnectMode(true, sid);
+                markSelected(sid);
+              } else {
+                const from = A.connectFrom, to = sid;
+                if (!A.alphabet.size) {
+                  alert('Defina Σ (alfabeto) primeiro.');
+                  setConnectMode(false);
+                  return;
+                }
+                promptSymbolAndCreate(from, to);
+                setConnectMode(false);
               }
-              promptSymbolAndCreate(from, to);
-              A.connectFrom = null;
-              A.connectMode = false;
+            } else {
+              markSelected(sid);
+              startDrag(ev, sid);
             }
-          } else {
-            markSelected(sid);
-            startDrag(ev, sid);
-          }
-        });
+          });
 
 
         g.addEventListener('dblclick', (ev) => {
