@@ -4,6 +4,7 @@ just a automaton simulator to practice Foundations of Theoretical Computer Scien
 ## Features
 
 - Build and edit deterministic and nondeterministic finite automata (with λ-transitions) in the browser.
+- Generate finite automata from regular grammars on the new `gr.html` page.
 - Simulate words normally via **Rodar** or step-by-step using **Modo Run** with a manual *Passo* button.
 
 ## Algorithm visualization
