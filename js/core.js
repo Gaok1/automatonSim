@@ -962,3 +962,5 @@
 
     renderAll();
 
+
+export { A, keyTS, alphaStr, renderStates, runHighlight, svg };
