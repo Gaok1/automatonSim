@@ -1,5 +1,3 @@
-import { A, keyTS, alphaStr, renderStates, runHighlight, svg } from "./core.js";
-
 const elRunResult = document.getElementById('runResult');
 const elRunSteps = document.getElementById('runSteps');
 const runBtn = document.getElementById('runBtn');
