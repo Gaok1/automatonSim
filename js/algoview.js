@@ -1,5 +1,3 @@
-import { A, renderStates, runHighlight } from './core.js';
-
 const elSteps = document.getElementById('algoSteps');
 const titles = {
   removeLambda: 'AFNλ → AFN',
