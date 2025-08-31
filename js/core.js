@@ -62,6 +62,10 @@
       if (A.selectedStateId) markSelected(A.selectedStateId);
     }
 
+    function emitAlgoStep(algo, step, detail = {}) {
+      document.dispatchEvent(new CustomEvent('algoStep', { detail: { algo, step, ...detail } }));
+    }
+
     /* -------------------- Persistência -------------------- */
     function snapshot() {
       return {
@@ -859,10 +863,13 @@
     function removeLambdaTransitions() {
       const closures = new Map();
       for (const id of A.states.keys()) {
-        closures.set(id, epsilonClosureMap(new Set([id]), A.transitions));
+        const cl = epsilonClosureMap(new Set([id]), A.transitions);
+        closures.set(id, cl);
+        emitAlgoStep('removeLambda', 'closure', { state: id, closure: Array.from(cl) });
       }
       for (const s of A.states.values()) {
         s.isFinal = [...closures.get(s.id)].some(id => A.states.get(id)?.isFinal);
+        emitAlgoStep('removeLambda', 'final', { state: s.id, isFinal: s.isFinal });
       }
       const newTrans = new Map();
       for (const id of A.states.keys()) {
@@ -877,7 +884,10 @@
               }
             }
           }
-          if (dests.size) newTrans.set(keyTS(id, sym), dests);
+          if (dests.size) {
+            newTrans.set(keyTS(id, sym), dests);
+            emitAlgoStep('removeLambda', 'transition', { from: id, sym, to: Array.from(dests) });
+          }
         }
       }
       A.transitions = newTrans;
@@ -924,6 +934,7 @@
           subsetMap.set(key, sid);
           A.states.set(sid, st);
           queue.push(set);
+          emitAlgoStep('nfaToDfa', 'newState', { id: sid, subset: Array.from(set) });
         }
         return subsetMap.get(key);
       }
@@ -948,6 +959,7 @@
             const toId = getIdFor(dest);
             if (!A.transitions.has(keyTS(fromId, sym))) A.transitions.set(keyTS(fromId, sym), new Set());
             A.transitions.get(keyTS(fromId, sym)).add(toId);
+            emitAlgoStep('nfaToDfa', 'transition', { from: fromId, sym, to: toId });
           }
         }
       }
@@ -956,9 +968,15 @@
     }
 
     const btnLambda = document.getElementById('lambdaToNfaBtn');
-    if (btnLambda) btnLambda.onclick = removeLambdaTransitions;
+    if (btnLambda) btnLambda.onclick = () => {
+      emitAlgoStep('removeLambda', 'start', {});
+      removeLambdaTransitions();
+    };
     const btnDfa = document.getElementById('nfaToDfaBtn');
-    if (btnDfa) btnDfa.onclick = convertNfaToDfa;
+    if (btnDfa) btnDfa.onclick = () => {
+      emitAlgoStep('nfaToDfa', 'start', {});
+      convertNfaToDfa();
+    };
 
     renderAll();
 
