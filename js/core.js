@@ -488,6 +488,7 @@
     /* -------------------- Conversão DFA → ER (eliminação de estados) -------------------- */
     document.getElementById('buildRegexBtn').onclick = () => {
       const allowEps = document.getElementById('allowEpsilon').checked;
+      emitAlgoStep('dfaToRegex', 'start', {});
       const res = dfaToRegex(allowEps);
       elRegexOut.textContent = res.output || '';
       elRegexMsg.innerHTML = res.msg || '';
@@ -524,6 +525,7 @@
       for (let k = 0; k < N; k++) if (k !== Saux && k !== Faux) statesOrder.push(k);
 
       for (const k of statesOrder) {
+        emitAlgoStep('dfaToRegex', 'eliminate', { state: states[k] });
         const Rkk = G[k][k] || null;
         const starK = star(Rkk);
         for (let i = 0; i < N; i++) {
@@ -536,10 +538,23 @@
             if (!Rkj) continue;
             const via = concat(concat(Rik, starK), Rkj);
             G[i][j] = union(G[i][j], via);
+            const fromId = i < n ? states[i] : null;
+            const toId = j < n ? states[j] : null;
+            const fromName = i === Saux ? 'I' : (i < n ? (A.states.get(states[i])?.name || states[i]) : '');
+            const toName = j === Faux ? 'F' : (j < n ? (A.states.get(states[j])?.name || states[j]) : '');
+            emitAlgoStep('dfaToRegex', 'transition', {
+              from: fromId,
+              to: toId,
+              via: states[k],
+              regex: via,
+              fromName,
+              toName
+            });
           }
         }
         for (let i = 0; i < N; i++) { G[i][k] = null; G[k][i] = null; }
         G[k][k] = null;
+        emitAlgoStep('dfaToRegex', 'remove', { state: states[k] });
       }
 
       let Rfinal = G[Saux][Faux] || null;
@@ -548,6 +563,7 @@
       }
 
       Rfinal = simplify(Rfinal);
+      emitAlgoStep('dfaToRegex', 'final', { regex: Rfinal });
 
       if (!allowEps) {
         if (Rfinal.includes('λ')) {
@@ -586,7 +602,7 @@
       if (isNull(a)) return b || null;
       if (isNull(b)) return a || null;
       if (a === b) return a;
-      const parts = new Set(a.split(' ∪ ').concat(b.split(' ∪ ')));
+      const parts = new Set(splitTopUnion(a).concat(splitTopUnion(b)));
       return Array.from(parts).join(' ∪ ');
     }
 

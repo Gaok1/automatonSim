@@ -2,6 +2,7 @@ const elSteps = document.getElementById('algoSteps');
 const titles = {
   removeLambda: 'AFNλ → AFN',
   nfaToDfa: 'AFN → AFD',
+  dfaToRegex: 'AFD → ER',
 };
 
 function nameOf(id) {
@@ -41,6 +42,26 @@ document.addEventListener('algoStep', ev => {
       runHighlight.set(data.from, 'running');
       runHighlight.set(data.to, 'running');
       renderStates();
+    } else {
+      div.textContent = `${step}`;
+    }
+  } else if (algo === 'dfaToRegex') {
+    if (step === 'eliminate') {
+      div.textContent = `eliminando ${nameOf(data.state)}`;
+      runHighlight.clear();
+      runHighlight.set(data.state, 'running');
+      renderStates();
+    } else if (step === 'transition') {
+      div.textContent = `${data.fromName} → ${data.toName} via ${nameOf(data.via)}: ${data.regex}`;
+      runHighlight.clear();
+      if (data.from) runHighlight.set(data.from, 'running');
+      if (data.via) runHighlight.set(data.via, 'running');
+      if (data.to) runHighlight.set(data.to, 'running');
+      renderStates();
+    } else if (step === 'remove') {
+      div.textContent = `estado ${nameOf(data.state)} removido`;
+    } else if (step === 'final') {
+      div.textContent = `ER = ${data.regex}`;
     } else {
       div.textContent = `${step}`;
     }
