@@ -737,8 +737,10 @@
           const arr = Array.isArray(v) ? v : [v];
           const key = keyTS(map.get(src), sym);
           const set = transitions.get(key) || new Set();
-          arr.forEach(d => set.add(map.get(d)));
-          transitions.set(key, set);
+          arr.forEach(d => {
+            if (map.has(d)) set.add(map.get(d));
+          });
+          if (set.size) transitions.set(key, set);
         }
       }
 
