@@ -24,9 +24,9 @@
     const elRegexOut = document.getElementById('regexOut');
     const elRegexMsg = document.getElementById('regexMsg');
     let runHighlight = new Map();
-    document.getElementById('unionBtn').onclick = () => importTwoAndCombine('union');
-    document.getElementById('intersectionBtn').onclick = () => importTwoAndCombine('intersection');
-    document.getElementById('equivalenceBtn').onclick = () => importTwoAndCheckEquivalence();
+    document.getElementById('unionBtn').onclick = () => importTwoNFAs('union');
+    document.getElementById('concatBtn').onclick = () => importTwoNFAs('concat');
+    document.getElementById('closureBtn').onclick = () => importOneNFAStar();
 
 
 
@@ -704,6 +704,154 @@
         .map(([k, v]) => [k, (Array.isArray(v) ? v : [v]).filter(d => reachable.has(d))])
         .filter(([k, arr]) => arr.length > 0);
       return obj;
+    }
+
+    function combineNFAs(obj1, obj2, op) {
+      const alpha = Array.from(new Set([...(obj1.alphabet || []), ...(obj2.alphabet || [])]));
+      const states = new Map();
+      const transitions = new Map();
+      const map1 = new Map();
+      const map2 = new Map();
+      let idCounter = 0;
+      const nid = () => 'q' + (idCounter++);
+
+      function clone(obj, map) {
+        for (const s of obj.states) {
+          const id = nid();
+          states.set(id, { id, name: s.name, x: Math.random() * 500 + 50, y: Math.random() * 300 + 50, isFinal: s.isFinal, isInitial: false });
+          map.set(s.id, id);
+        }
+        for (const [k, v] of obj.transitions) {
+          const [src, sym] = String(k).split('|');
+          if (!map.has(src)) continue;
+          const arr = Array.isArray(v) ? v : [v];
+          const key = keyTS(map.get(src), sym);
+          const set = transitions.get(key) || new Set();
+          arr.forEach(d => set.add(map.get(d)));
+          transitions.set(key, set);
+        }
+      }
+
+      clone(obj1, map1);
+      clone(obj2, map2);
+
+      let initialId = '';
+      if (op === 'union') {
+        initialId = nid();
+        states.set(initialId, { id: initialId, name: 'init', x: Math.random() * 500 + 50, y: Math.random() * 300 + 50, isInitial: true, isFinal: false });
+        const set = new Set([map1.get(obj1.initialId), map2.get(obj2.initialId)]);
+        transitions.set(keyTS(initialId, 'λ'), set);
+        for (const s of obj1.states) states.get(map1.get(s.id)).isFinal = s.isFinal;
+        for (const s of obj2.states) states.get(map2.get(s.id)).isFinal = s.isFinal;
+      } else if (op === 'concat') {
+        initialId = map1.get(obj1.initialId);
+        states.get(initialId).isInitial = true;
+        const init2 = map2.get(obj2.initialId);
+        const init2IsFinal = obj2.states.find(s => s.id === obj2.initialId)?.isFinal;
+        for (const s of obj1.states) {
+          const id = map1.get(s.id);
+          states.get(id).isFinal = init2IsFinal && s.isFinal;
+          if (s.isFinal) {
+            const key = keyTS(id, 'λ');
+            const set = transitions.get(key) || new Set();
+            set.add(init2);
+            transitions.set(key, set);
+          }
+        }
+        for (const s of obj2.states) {
+          const id = map2.get(s.id);
+          states.get(id).isFinal = s.isFinal;
+        }
+      }
+
+      let newObj = {
+        alphabet: alpha,
+        states: Array.from(states.values()),
+        transitions: Array.from(transitions.entries()).map(([k, set]) => [k, Array.from(set)]),
+        initialId,
+        nextId: idCounter
+      };
+      newObj = removeUnreachableStates(newObj);
+      restoreFromObject(newObj);
+      saveLS();
+      renderAll();
+    }
+
+    function starNFA(obj) {
+      const alpha = Array.from(new Set(obj.alphabet || []));
+      const states = new Map();
+      const transitions = new Map();
+      const map = new Map();
+      let idCounter = 0;
+      const nid = () => 'q' + (idCounter++);
+
+      for (const s of obj.states) {
+        const id = nid();
+        states.set(id, { id, name: s.name, x: Math.random() * 500 + 50, y: Math.random() * 300 + 50, isFinal: s.isFinal, isInitial: false });
+        map.set(s.id, id);
+      }
+      for (const [k, v] of obj.transitions) {
+        const [src, sym] = String(k).split('|');
+        const arr = Array.isArray(v) ? v : [v];
+        const key = keyTS(map.get(src), sym);
+        const set = transitions.get(key) || new Set();
+        arr.forEach(d => set.add(map.get(d)));
+        transitions.set(key, set);
+      }
+
+      const initOld = map.get(obj.initialId);
+      const newInit = nid();
+      states.set(newInit, { id: newInit, name: 'init', x: Math.random() * 500 + 50, y: Math.random() * 300 + 50, isInitial: true, isFinal: true });
+      transitions.set(keyTS(newInit, 'λ'), new Set([initOld]));
+      for (const s of obj.states) {
+        if (s.isFinal) {
+          const id = map.get(s.id);
+          const key = keyTS(id, 'λ');
+          const set = transitions.get(key) || new Set();
+          set.add(initOld);
+          set.add(newInit);
+          transitions.set(key, set);
+        }
+      }
+
+      let newObj = {
+        alphabet: alpha,
+        states: Array.from(states.values()),
+        transitions: Array.from(transitions.entries()).map(([k, set]) => [k, Array.from(set)]),
+        initialId: newInit,
+        nextId: idCounter
+      };
+      newObj = removeUnreachableStates(newObj);
+      restoreFromObject(newObj);
+      saveLS();
+      renderAll();
+    }
+
+    function importTwoNFAs(op) {
+      let data1 = null, data2 = null;
+      const file1 = document.getElementById('importFile1');
+      const file2 = document.getElementById('importFile2');
+      file1.onchange = () => {
+        const reader = new FileReader();
+        reader.onload = () => { data1 = JSON.parse(reader.result); file2.click(); };
+        reader.readAsText(file1.files[0]);
+      };
+      file2.onchange = () => {
+        const reader = new FileReader();
+        reader.onload = () => { data2 = JSON.parse(reader.result); combineNFAs(data1, data2, op); };
+        reader.readAsText(file2.files[0]);
+      };
+      file1.click();
+    }
+
+    function importOneNFAStar() {
+      const file1 = document.getElementById('importFile1');
+      file1.onchange = () => {
+        const reader = new FileReader();
+        reader.onload = () => { const data = JSON.parse(reader.result); starNFA(data); };
+        reader.readAsText(file1.files[0]);
+      };
+      file1.click();
     }
 
     function combineAFDs(obj1, obj2, op) {
