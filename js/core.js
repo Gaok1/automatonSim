@@ -706,6 +706,16 @@
       return obj;
     }
 
+    function nfaAcceptsEmpty(obj) {
+      const trans = new Map(
+        (obj.transitions || []).map(([k, v]) => [k, new Set(Array.isArray(v) ? v : [v])])
+      );
+      const closure = epsilonClosureMap(new Set([obj.initialId]), trans);
+      const finals = new Set(obj.states.filter(s => s.isFinal).map(s => s.id));
+      for (const q of closure) if (finals.has(q)) return true;
+      return false;
+    }
+
     function combineNFAs(obj1, obj2, op) {
       const alpha = Array.from(new Set([...(obj1.alphabet || []), ...(obj2.alphabet || [])]));
       const states = new Map();
@@ -738,19 +748,25 @@
       let initialId = '';
       if (op === 'union') {
         initialId = nid();
-        states.set(initialId, { id: initialId, name: 'init', x: Math.random() * 500 + 50, y: Math.random() * 300 + 50, isInitial: true, isFinal: false });
+        const initFinal = nfaAcceptsEmpty(obj1) || nfaAcceptsEmpty(obj2);
+        states.set(initialId, {
+          id: initialId,
+          name: 'init',
+          x: Math.random() * 500 + 50,
+          y: Math.random() * 300 + 50,
+          isInitial: true,
+          isFinal: initFinal
+        });
         const set = new Set([map1.get(obj1.initialId), map2.get(obj2.initialId)]);
         transitions.set(keyTS(initialId, 'λ'), set);
-        for (const s of obj1.states) states.get(map1.get(s.id)).isFinal = s.isFinal;
-        for (const s of obj2.states) states.get(map2.get(s.id)).isFinal = s.isFinal;
       } else if (op === 'concat') {
         initialId = map1.get(obj1.initialId);
         states.get(initialId).isInitial = true;
         const init2 = map2.get(obj2.initialId);
-        const init2IsFinal = obj2.states.find(s => s.id === obj2.initialId)?.isFinal;
+        const acceptsEmpty2 = nfaAcceptsEmpty(obj2);
         for (const s of obj1.states) {
           const id = map1.get(s.id);
-          states.get(id).isFinal = init2IsFinal && s.isFinal;
+          states.get(id).isFinal = acceptsEmpty2 && s.isFinal;
           if (s.isFinal) {
             const key = keyTS(id, 'λ');
             const set = transitions.get(key) || new Set();
@@ -758,10 +774,11 @@
             transitions.set(key, set);
           }
         }
-        for (const s of obj2.states) {
-          const id = map2.get(s.id);
-          states.get(id).isFinal = s.isFinal;
-        }
+      }
+
+      for (const s of obj2.states) {
+        const id = map2.get(s.id);
+        states.get(id).isFinal = s.isFinal;
       }
 
       let newObj = {
