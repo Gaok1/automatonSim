@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8" />
-  <title>Gramática → Autômato</title>
+  <title>Gramática/ER → Autômato</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="style.css">
 </head>
@@ -17,6 +17,15 @@
   </nav>
 
   <div class="left">
+    <div class="card">
+      <h2>Expressão Regular</h2>
+      <input type="text" id="regexInput" placeholder="Ex: (a∪b)*a" />
+      <div class="row">
+        <button id="buildFromRegexBtn" class="btn-accent">Gerar AF</button>
+      </div>
+      <div class="mini muted">Use ∪ para união, * para fecho e λ para vazio.</div>
+    </div>
+
     <div class="card">
       <h2>Gramática Regular</h2>
       <textarea id="grammarInput" rows="6" placeholder="S->aA|b&#10;A->aS|λ"></textarea>
@@ -135,6 +144,7 @@
 
     <script>window.LS_KEY='afn_gr_sim_state_v1';</script>
     <script src="js/core.js"></script>
+    <script src="js/regex.js"></script>
     <script src="js/grammar.js"></script>
     <script src="js/run.js"></script>
     <script src="js/algoview.js"></script>
