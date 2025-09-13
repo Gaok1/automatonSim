@@ -1,0 +1,16 @@
+{
+  "version": 3,
+  "alphabet": ["a", "b", "λ"],
+  "states": [
+    {"id": "s0", "name": "s0", "x": 160, "y": 200, "isInitial": true, "isFinal": false},
+    {"id": "s1", "name": "s1", "x": 320, "y": 200, "isInitial": false, "isFinal": false},
+    {"id": "s2", "name": "s2", "x": 500, "y": 200, "isInitial": false, "isFinal": true}
+  ],
+  "nextId": 3,
+  "transitions": [
+    ["s0|a", ["s1"]],
+    ["s1|b", ["s2"]],
+    ["s1|λ", ["s2"]]
+  ],
+  "initialId": "s0"
+}

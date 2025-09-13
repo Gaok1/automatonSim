@@ -6,6 +6,8 @@ just a automaton simulator to practice Foundations of Theoretical Computer Scien
 - Build and edit deterministic and nondeterministic finite automata (with λ-transitions) in the browser.
 - Generate finite automata from regular grammars on the new `gr.html` page.
 - Simulate words normally via **Rodar** or step-by-step using **Modo Run** with a manual *Passo* button.
+- Export the current canvas as a PNG image.
+- Load classic automata from the **Exemplos** menu for quick experiments.
 
 ## Algorithm visualization
 
