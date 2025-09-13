@@ -1,174 +1,612 @@
 <!DOCTYPE html>
-<!--
-  Página AFD: edição/simulação de autômato determinístico.
-  Seções principais:
-  - Alfabeto/Estados: construção do AF.
-  - Simular Palavra: execução no AFD atual.
-  - Exportar/Importar/Exemplos: persistência e biblioteca didática.
-  - Canvas: visualização do grafo (estados/arestas).
--->
 <html lang="pt-BR">
-
 <head>
   <meta charset="utf-8" />
-  <title>Simulador Interativo de AFD</title>
+  <title>automatonSim — AFD/AFN/GR (unificado)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ===== Ajustes do layout unificado =====
+       - #app vira o contêiner flex principal (2 colunas)
+       - Proporção: esquerda 2/6, direita 4/6
+       - Mantém as classes originais (.left/.right/.card) sem quebrar ids. */
+    #app {
+      display: flex;
+      gap: 16px;
+      width: 100%;
+      min-width: 0;
+      flex: 1;
+    }
+    #app > .left, #app > .right {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+    /* Sobrepõe o flex padrão de .left do style.css */
+    #app > .left { flex: 2; }
+    #app > .right { flex: 4; }
+    /* Para listas longas sob o canvas */
+    .stack-below-canvas .card + .card { margin-top: 0; }
+    /* Acessibilidade leve */
+    #runResult, #runSteps { outline: none; }
+  </style>
 </head>
 
 <body>
 
-  <nav class="tabs">
-    <a href="index.html" class="active">AFD</a>
-    <a href="afn.html">AFN</a>
-    <a href="gr.html">GR</a>
+  <nav class="tabs" role="tablist">
+    <a href="#afd" data-mode="afd">AFD</a>
+    <a href="#afn" data-mode="afn">AFN</a>
+    <a href="#gr"  data-mode="gr">GR</a>
   </nav>
 
-  <div class="left">
-    <div class="card">
-      <h2>Alfabeto</h2>
-      <div class="row">
-        <input type="text" id="alphabetInput" placeholder="Símbolos separados por vírgula. Ex: A,B" />
-        <button class="btn-accent" id="setAlphabetBtn">Definir</button>
-        <span class="muted mini">Use apenas símbolos unitários (sem strings). Ex.: <span class="kbd">A</span>, <span
-            class="kbd">B</span>, <span class="kbd">0</span>, <span class="kbd">1</span>.</span>
-      </div>
-      <div id="alphabetView" class="pill muted">Σ = { }</div>
-    </div>
+  <!-- Contêiner onde o template ativo será injetado ANTES dos scripts -->
+  <div id="app"></div>
 
-    <div class="card">
-      <h2>Estados</h2>
-      <div class="toolbar">
-        <button id="addStateBtn">+ Estado</button>
-        <button id="toggleInitialBtn" class="btn-soft">Alternar Inicial</button>
-        <button id="toggleFinalBtn" class="btn-soft">Alternar Final</button>
-        <button id="deleteSelectedBtn" class="btn-danger">Excluir Selecionado</button>
-        <button id="editBtn" class="btn-soft" title="Editar (E)">Editar</button>
-        <button id="resetBtn" class="btn-danger">Limpar AF</button>
-        <button id="helpBtn" class="btn-soft" title="Ajuda (atalhos e dicas)">Ajuda</button>
-      </div>
-      <div class="toolbar">
-        <button id="layoutPresetCompactBtn" class="btn-soft" title="Preset: compacto (agrupa)">Compacto</button>
-        <button id="layoutPresetBalancedBtn" class="btn-soft" title="Preset: balanceado">Balanceado</button>
-        <button id="layoutPresetSpreadBtn" class="btn-soft" title="Preset: espalhar">Espalhar</button>
-      </div>
-      <div class="legend">
-        <span class="dot dot-initial"></span><span class="mini">Inicial</span>
-        <span class="dot dot-final"></span><span class="mini">Final</span>
-        <span class="dot dot-halt"></span><span class="mini">HALT (transição ausente)</span>
-      </div>
-      <div class="hr"></div>
-    </div>
-
-  <div class="card grid cols-2">
-      <div>
-        <h2>Simular Palavra</h2>
+  <!-- ===================== TEMPLATE: AFD ===================== -->
+  <template id="tmpl-afd">
+    <!-- Sidebar (2/6) -->
+    <div class="left">
+      <div class="card">
+        <h2>Alfabeto</h2>
         <div class="row">
-          <input type="text" id="wordInput" placeholder="Ex: ABAAB" />
-          <button id="runBtn" class="btn-accent">Rodar</button>
-          <button id="runStartBtn" class="btn-soft">Modo Run</button>
-          <button id="runStepBtn" class="btn-soft" disabled>Passo</button>
+          <input type="text" id="alphabetInput" placeholder="Símbolos separados por vírgula. Ex: A,B" />
+          <button class="btn-accent" id="setAlphabetBtn">Definir</button>
+          <span class="muted mini">Use apenas símbolos unitários (sem strings). Ex.: <span class="kbd">A</span>, <span class="kbd">B</span>, <span class="kbd">0</span>, <span class="kbd">1</span>.</span>
         </div>
-        <div id="runResult" class="mini"></div>
-        <div id="runSteps" class="scroll mini"></div>
+        <div id="alphabetView" class="pill muted">Σ = { }</div>
       </div>
-      <div>
-        <h2>Expressão Regular (AFD → ER)</h2>
+
+      <div class="card">
+        <h2>Estados</h2>
+        <div class="toolbar">
+          <button id="addStateBtn">Novo</button>
+          <button id="toggleInitialBtn" class="btn-soft">Inicial</button>
+          <button id="toggleFinalBtn" class="btn-soft">Final</button>
+          <button id="deleteSelectedBtn" class="btn-danger">Excluir</button>
+          <button id="editBtn" class="btn-soft" title="Editar (E)">Editar</button>
+          <button id="resetBtn" class="btn-danger">Limpar AF</button>
+          <button id="helpBtn" class="btn-soft" title="Ajuda (atalhos e dicas)">Ajuda</button>
+        </div>
+        <div class="toolbar">
+          <button id="snapBtn" class="btn-soft" title="Snap-to-grid (G)">Snap</button>
+          <input id="gridSizeInput" type="number" min="5" max="200" step="5" value="20" style="width:80px" title="Tamanho da grade (px)" />
+          <button id="autoLayoutBtn" class="btn-soft" title="Organizar grafo automaticamente">Organizar grafo</button>
+          <button id="layoutPresetCompactBtn" class="btn-soft">Compacto</button>
+          <button id="layoutPresetBalancedBtn" class="btn-soft">Balanceado</button>
+          <button id="layoutPresetSpreadBtn" class="btn-soft">Espalhar</button>
+          <span class="mini muted">it</span>
+          <input id="layoutIterInput" type="number" min="10" max="3000" step="10" value="200" style="width:80px" title="Iterações" />
+          <span class="mini muted">rep</span>
+          <input id="layoutRepInput" type="number" min="0" max="50000" step="500" value="8000" style="width:90px" title="Repulsão" />
+          <span class="mini muted">K</span>
+          <input id="layoutKInput" type="number" min="0" max="1" step="0.005" value="0.02" style="width:80px" title="Atração (força de mola)" />
+          <span class="mini muted">damp</span>
+          <input id="layoutDampInput" type="number" min="0.5" max="0.99" step="0.01" value="0.85" style="width:80px" title="Amortecimento" />
+          <label class="mini"><input id="layoutCenterInput" type="checkbox" checked /> Centralizar</label>
+          <span class="mini muted">Alinhar:</span>
+          <button id="alignLeftBtn" class="btn-soft" title="Alinhar Esquerda (L)">L</button>
+          <button id="alignRightBtn" class="btn-soft" title="Alinhar Direita (R)">R</button>
+          <button id="alignTopBtn" class="btn-soft" title="Alinhar Topo (T)">T</button>
+          <button id="alignBottomBtn" class="btn-soft" title="Alinhar Base (B)">B</button>
+          <button id="alignCenterXBtn" class="btn-soft" title="Centralizar X (X)">CX</button>
+          <button id="alignCenterYBtn" class="btn-soft" title="Centralizar Y (Y)">CY</button>
+          <span class="mini muted">Distribuir:</span>
+          <button id="distributeHBtn" class="btn-soft" title="Distribuir Horizontal (H)">H</button>
+          <button id="distributeVBtn" class="btn-soft" title="Distribuir Vertical (V)">V</button>
+        </div>
+        <div class="legend">
+          <span class="dot dot-initial"></span><span class="mini">Inicial</span>
+          <span class="dot dot-final"></span><span class="mini">Final</span>
+          <span class="dot dot-halt"></span><span class="mini">HALT (transição ausente)</span>
+        </div>
+        <div class="hr"></div>
+        <div class="row mini muted">Dica: clique em um estado para selecioná-lo. Use <span class="kbd">C</span> ou o ícone
+          de ligação para conectar: clique na origem e depois no destino para escolher o símbolo.</div>
+      </div>
+
+      <div class="card grid cols-2">
+        <div>
+          <h2>Simular Palavra</h2>
+          <div class="row">
+            <input type="text" id="wordInput" placeholder="Ex: ABAAB" />
+            <button id="runBtn" class="btn-accent">Rodar</button>
+            <button id="runStartBtn" class="btn-soft">Modo Run</button>
+            <button id="runStepBtn" class="btn-soft" disabled>Passo</button>
+          </div>
+          <div id="runResult" class="mini" aria-live="polite"></div>
+          <div id="runSteps" class="scroll mini" aria-live="polite"></div>
+        </div>
+        <div>
+          <h2>Expressão Regular (AFD → ER)</h2>
+          <div class="row">
+            <label><input type="checkbox" id="allowEpsilon" /> Permitir λ na saída</label>
+            <button id="buildRegexBtn">Gerar ER</button>
+          </div>
+          <div id="regexMsg" class="mini muted"></div>
+          <div id="regexOut" class="pill" style="margin-top:6px; font-weight:700; font-size:15px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Exportar / Importar</h2>
+        <div class="toolbar">
+          <button id="exportBtn" class="btn-soft">Exportar AF</button>
+          <button id="exportPngBtn" class="btn-soft">Exportar PNG</button>
+          <button id="importBtn" class="btn-soft">Importar AF</button>
+          <input type="file" id="importFile" accept="application/json" style="display:none" />
+        </div>
+        <div class="mini muted">Exporta um JSON com Σ, estados, transições, inicial e <code>nextId</code>. Importar
+          substituirá o AF atual.</div>
+      </div>
+
+      <div class="card">
+        <h2>Tabela δ (AFD)</h2>
+        <div class="toolbar">
+          <button id="refreshDeltaBtn" class="btn-soft">Atualizar</button>
+          <span class="mini muted">Edite as células para definir δ(q, a) = p</span>
+        </div>
+        <div id="deltaTable" class="scroll"></div>
+      </div>
+
+      <div class="card">
+        <h2>Exemplos</h2>
         <div class="row">
-          <label><input type="checkbox" id="allowEpsilon" /> Permitir λ na saída</label>
-          <button id="buildRegexBtn">Gerar ER</button>
+          <select id="examplesSelect">
+            <option value="">Escolha um exemplo…</option>
+          </select>
+          <button id="loadExampleBtn" class="btn-soft">Carregar</button>
         </div>
-        <div id="regexMsg" class="mini muted"></div>
-        <div id="regexOut" class="pill" style="margin-top:6px; font-weight:700; font-size:15px;"></div>
+        <div class="mini muted">Carrega um AF/AFD de exemplos prontos desta biblioteca.</div>
       </div>
     </div>
 
-  
-
-  
-
-  <div class="card">
-    <h2>Exportar / Importar</h2>
-    <div class="toolbar">
-      <button id="exportBtn" class="btn-soft">Exportar AF</button>
-      <button id="exportPngBtn" class="btn-soft">Exportar PNG</button>
-      <button id="importBtn" class="btn-soft">Importar AF</button>
-      <input type="file" id="importFile" accept="application/json" style="display:none" />
-    </div>
-    <div class="mini muted">Exporta um JSON com Σ, estados, transições, inicial e <code>nextId</code>. Importar
-      substituirá o AF atual.</div>
-  </div>
-
-  <div class="card">
-    <h2>Tabela δ (AFD)</h2>
-    <div class="toolbar">
-      <button id="refreshDeltaBtn" class="btn-soft">Atualizar</button>
-      <span class="mini muted">Edite as células para definir δ(q, a) = p</span>
-    </div>
-    <div id="deltaTable" class="scroll"></div>
-  </div>
-
-  <div class="card">
-    <h2>Exemplos</h2>
-    <div class="row">
-      <select id="examplesSelect">
-        <option value="">Escolha um exemplo…</option>
-      </select>
-      <button id="loadExampleBtn" class="btn-soft">Carregar</button>
-    </div>
-    <div class="mini muted">Carrega um AF/AFD de exemplos prontos desta biblioteca.</div>
-  </div>
-  
-  </div>
-
-  <div class="right" style="flex:1.2">
-    <div class="card">
-      <h2>Canvas</h2>
-      <div id="canvasWrapper">
-        <svg id="svg">
-          <defs>
-            <marker id="arrow" markerWidth="18" markerHeight="12" refX="10" refY="6" orient="auto"
-              markerUnits="strokeWidth">
-              <path d="M0,0 L10,6 L0,12 z" fill="#cbd5e1"></path>
-            </marker>
-          </defs>
-          <g id="edges"></g>
-          <g id="labels"></g>
-          <g id="initialPointers"></g>
-          <g id="states"></g>
-        </svg>
+    <!-- Coluna do Canvas (4/6) -->
+    <div class="right stack-below-canvas">
+      <div class="card">
+        <h2>Canvas</h2>
+        <div id="canvasWrapper">
+          <svg id="svg">
+            <defs>
+              <marker id="arrow" markerWidth="18" markerHeight="12" refX="10" refY="6" orient="auto"
+                markerUnits="strokeWidth">
+                <path d="M0,0 L10,6 L0,12 z" fill="#cbd5e1"></path>
+              </marker>
+            </defs>
+            <g id="edges"></g>
+            <g id="labels"></g>
+            <g id="initialPointers"></g>
+            <g id="states"></g>
+          </svg>
+        </div>
+        <div class="hr"></div>
+        <div class="mini muted">Transições</div>
+        <div id="transitionsList" class="scroll mini"></div>
       </div>
-      <div class="hr"></div>
-      <div class="mini muted">Transições</div>
-      <div id="transitionsList" class="scroll mini"></div>
-    </div>
 
-    <div class="card">
-      <h2>Operações entre AFDs</h2>
-      <div class="toolbar">
-        <button id="unionBtn" class="btn-soft">União</button>
-        <button id="intersectionBtn" class="btn-soft">Interseção</button>
-        <button id="differenceBtn" class="btn-soft">Diferença (A \ B)</button>
-        <button id="equivalenceBtn" class="btn-soft">Equivalência</button>
-        <input type="file" id="importFile1" accept="application/json" style="display:none" />
-        <input type="file" id="importFile2" accept="application/json" style="display:none" />
+      <!-- Operações abaixo do Canvas -->
+      <div class="card">
+        <h2>Operações entre AFDs</h2>
+        <div class="toolbar">
+          <button id="unionBtn" class="btn-soft">União</button>
+          <button id="intersectionBtn" class="btn-soft">Interseção</button>
+          <button id="differenceBtn" class="btn-soft">Diferença (A \ B)</button>
+          <button id="equivalenceBtn" class="btn-soft">Equivalência</button>
+          <input type="file" id="importFile1" accept="application/json" style="display:none" />
+          <input type="file" id="importFile2" accept="application/json" style="display:none" />
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Operações no AFD atual</h2>
+        <div class="toolbar">
+          <button id="completeDfaBtn" class="btn-soft">Completar AFD</button>
+          <button id="complementBtn" class="btn-soft">Complemento</button>
+          <button id="prefixClosureBtn" class="btn-soft">Fecho por Prefixos</button>
+          <button id="suffixClosureBtn" class="btn-soft">Fecho por Sufixos</button>
+        </div>
+        <div class="mini muted">Para complemento e diferença, é recomendado completar o AFD (estado armadilha).</div>
       </div>
     </div>
+  </template>
 
-    <div class="card">
-      <h2>Operações no AFD atual</h2>
-      <div class="toolbar">
-        <button id="completeDfaBtn" class="btn-soft">Completar AFD</button>
-        <button id="complementBtn" class="btn-soft">Complemento</button>
-        <button id="prefixClosureBtn" class="btn-soft">Fecho por Prefixos</button>
-        <button id="suffixClosureBtn" class="btn-soft">Fecho por Sufixos</button>
+  <!-- ===================== TEMPLATE: AFN ===================== -->
+  <template id="tmpl-afn">
+    <!-- Sidebar (2/6) -->
+    <div class="left">
+      <div class="card">
+        <h2>Alfabeto</h2>
+        <div class="row">
+          <input type="text" id="alphabetInput" placeholder="Símbolos separados por vírgula. Ex: A,B" />
+          <button class="btn-accent" id="setAlphabetBtn">Definir</button>
+          <span class="muted mini">Use apenas símbolos unitários (sem strings). Ex.: <span class="kbd">A</span>, <span class="kbd">B</span>, <span class="kbd">0</span>, <span class="kbd">1</span>.</span>
+        </div>
+        <div id="alphabetView" class="pill muted">Σ = { }</div>
       </div>
-      <div class="mini muted">Para complemento e diferença, é recomendado completar o AFD (estado armadilha).</div>
+
+      <div class="card">
+        <h2>Estados</h2>
+        <div class="toolbar">
+          <button id="addStateBtn">Novo</button>
+          <button id="toggleInitialBtn" class="btn-soft">Inicial</button>
+          <button id="toggleFinalBtn" class="btn-soft">Final</button>
+          <button id="deleteSelectedBtn" class="btn-danger">Excluir</button>
+          <button id="editBtn" class="btn-soft" title="Editar (E)">Editar</button>
+          <button id="resetBtn" class="btn-danger">Limpar AF</button>
+          <button id="helpBtn" class="btn-soft" title="Ajuda (atalhos e dicas)">Ajuda</button>
+        </div>
+        <div class="toolbar">
+          <button id="snapBtn" class="btn-soft" title="Snap-to-grid (G)">Snap</button>
+          <input id="gridSizeInput" type="number" min="5" max="200" step="5" value="20" style="width:80px" title="Tamanho da grade (px)" />
+          <button id="autoLayoutBtn" class="btn-soft">Organizar grafo</button>
+          <button id="layoutPresetCompactBtn" class="btn-soft">Compacto</button>
+          <button id="layoutPresetBalancedBtn" class="btn-soft">Balanceado</button>
+          <button id="layoutPresetSpreadBtn" class="btn-soft">Espalhar</button>
+          <span class="mini muted">it</span>
+          <input id="layoutIterInput" type="number" min="10" max="3000" step="10" value="200" style="width:80px" />
+          <span class="mini muted">rep</span>
+          <input id="layoutRepInput" type="number" min="0" max="50000" step="500" value="8000" style="width:90px" />
+          <span class="mini muted">K</span>
+          <input id="layoutKInput" type="number" min="0" max="1" step="0.005" value="0.02" style="width:80px" />
+          <span class="mini muted">damp</span>
+          <input id="layoutDampInput" type="number" min="0.5" max="0.99" step="0.01" value="0.85" style="width:80px" />
+          <label class="mini"><input id="layoutCenterInput" type="checkbox" checked /> Centralizar</label>
+          <span class="mini muted">Alinhar:</span>
+          <button id="alignLeftBtn" class="btn-soft">L</button>
+          <button id="alignRightBtn" class="btn-soft">R</button>
+          <button id="alignTopBtn" class="btn-soft">T</button>
+          <button id="alignBottomBtn" class="btn-soft">B</button>
+          <button id="alignCenterXBtn" class="btn-soft">CX</button>
+          <button id="alignCenterYBtn" class="btn-soft">CY</button>
+          <span class="mini muted">Distribuir:</span>
+          <button id="distributeHBtn" class="btn-soft">H</button>
+          <button id="distributeVBtn" class="btn-soft">V</button>
+        </div>
+        <div class="legend">
+          <span class="dot dot-initial"></span><span class="mini">Inicial</span>
+          <span class="dot dot-final"></span><span class="mini">Final</span>
+          <span class="dot dot-halt"></span><span class="mini">HALT (transição ausente)</span>
+        </div>
+        <div class="hr"></div>
+        <div class="row mini muted">Dica: clique em um estado para selecioná-lo. Use <span class="kbd">C</span>…</div>
+      </div>
+
+      <div class="card grid cols-2">
+        <div>
+          <h2>Simular Palavra</h2>
+          <div class="row">
+            <input type="text" id="wordInput" placeholder="Ex: ABAAB" />
+            <button id="runBtn" class="btn-accent">Rodar</button>
+            <button id="runStartBtn" class="btn-soft">Modo Run</button>
+            <button id="runStepBtn" class="btn-soft" disabled>Passo</button>
+          </div>
+          <div id="runResult" class="mini" aria-live="polite"></div>
+          <div id="runSteps" class="scroll mini" aria-live="polite"></div>
+        </div>
+        <div>
+          <h2>Expressão Regular (AFD → ER)</h2>
+          <div class="row">
+            <label><input type="checkbox" id="allowEpsilon" /> Permitir λ na saída</label>
+            <button id="buildRegexBtn">Gerar ER</button>
+          </div>
+          <div id="regexMsg" class="mini muted"></div>
+          <div id="regexOut" class="pill" style="margin-top:6px; font-weight:700; font-size:15px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Exportar / Importar</h2>
+        <div class="toolbar">
+          <button id="exportBtn" class="btn-soft">Exportar AF</button>
+          <button id="exportPngBtn" class="btn-soft">Exportar PNG</button>
+          <button id="importBtn" class="btn-soft">Importar AF</button>
+          <input type="file" id="importFile" accept="application/json" style="display:none" />
+        </div>
+        <div class="mini muted">Exporta um JSON com Σ…</div>
+      </div>
+
+      <div class="card">
+        <h2>Exemplos</h2>
+        <div class="row">
+          <select id="examplesSelect">
+            <option value="">Escolha um exemplo…</option>
+          </select>
+          <button id="loadExampleBtn" class="btn-soft">Carregar</button>
+        </div>
+        <div class="mini muted">Carrega um AF/AFD…</div>
+      </div>
     </div>
-  </div>
 
-    <script src="js/core.js"></script>
-    <script src="js/run.js"></script>
-  </body>
+    <!-- Coluna do Canvas (4/6) -->
+    <div class="right stack-below-canvas">
+      <div class="card">
+        <h2>Canvas</h2>
+        <div id="canvasWrapper">
+          <svg id="svg">
+            <defs>
+              <marker id="arrow" markerWidth="18" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L10,6 L0,12 z" fill="#cbd5e1"></path>
+              </marker>
+            </defs>
+            <g id="edges"></g>
+            <g id="labels"></g>
+            <g id="initialPointers"></g>
+            <g id="states"></g>
+          </svg>
+        </div>
+        <div class="hr"></div>
+        <div class="mini muted">Transições</div>
+        <div id="transitionsList" class="scroll mini"></div>
+      </div>
 
+      <!-- Conversões e Operações abaixo do Canvas -->
+      <div class="card">
+        <h2>Conversões</h2>
+        <div class="toolbar">
+          <button id="lambdaToNfaBtn" class="btn-soft">AFNλ → AFN</button>
+          <button id="nfaToDfaBtn" class="btn-soft">AFN → AFD</button>
+          <button id="nfaToDfaOpenBtn" class="btn-soft">AFN → AFD e abrir</button>
+        </div>
+        <div id="algoSteps" class="mini scroll"></div>
+      </div>
+
+      <div class="card">
+        <h2>Operações AFNλ</h2>
+        <div class="toolbar">
+          <button id="unionBtn" class="btn-soft">União</button>
+          <button id="concatBtn" class="btn-soft">Concatenação</button>
+          <button id="closureBtn" class="btn-soft">Fecho</button>
+          <input type="file" id="importFile1" accept="application/json" style="display:none" />
+          <input type="file" id="importFile2" accept="application/json" style="display:none" />
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- ===================== TEMPLATE: GR ===================== -->
+  <template id="tmpl-gr">
+    <!-- Sidebar (2/6) -->
+    <div class="left">
+      <div class="card">
+        <h2>Expressão Regular</h2>
+        <input type="text" id="regexInput" placeholder="Ex: (a∪b)*a" />
+        <div class="row">
+          <button id="buildFromRegexBtn" class="btn-accent">Gerar AF</button>
+        </div>
+        <div class="mini muted">Use ∪ para união, * para fecho e λ para vazio.</div>
+      </div>
+
+      <div class="card">
+        <h2>Gramática Regular</h2>
+        <textarea id="grammarInput" rows="6" placeholder="S->aA|b&#10;A->aS|λ"></textarea>
+        <div class="row">
+          <button id="buildFromGrammarBtn" class="btn-accent">Gerar AF</button>
+          <button id="buildFromGrammarToDfaBtn" class="btn-soft">Gerar AFD</button>
+          <button id="buildFromGrammarToDfaOpenBtn" class="btn-soft">Gerar AFD e abrir</button>
+        </div>
+        <div class="mini muted">Use λ para a produção vazia.</div>
+      </div>
+
+      <div class="card">
+        <h2>AF → Gramática</h2>
+        <div class="row">
+          <button id="exportGrammarBtn" class="btn-soft">Exportar GR do AF</button>
+        </div>
+        <textarea id="grammarOut" rows="6" readonly placeholder="Produções aparecerão aqui"></textarea>
+        <div class="mini muted">O símbolo inicial é o estado inicial atual…</div>
+      </div>
+
+      <div class="card">
+        <h2>Alfabeto</h2>
+        <div class="row">
+          <input type="text" id="alphabetInput" placeholder="Símbolos separados por vírgula. Ex: A,B" />
+          <button class="btn-accent" id="setAlphabetBtn">Definir</button>
+          <span class="muted mini">Use apenas símbolos unitários…</span>
+        </div>
+        <div id="alphabetView" class="pill muted">Σ = { }</div>
+      </div>
+
+      <div class="card">
+        <h2>Estados</h2>
+        <div class="toolbar">
+          <button id="addStateBtn">Novo</button>
+          <button id="toggleInitialBtn" class="btn-soft">Inicial</button>
+          <button id="toggleFinalBtn" class="btn-soft">Final</button>
+          <button id="deleteSelectedBtn" class="btn-danger">Excluir</button>
+          <button id="editBtn" class="btn-soft" title="Editar (E)">Editar</button>
+          <button id="resetBtn" class="btn-danger">Limpar AF</button>
+          <button id="helpBtn" class="btn-soft" title="Ajuda (atalhos e dicas)">Ajuda</button>
+        </div>
+        <div class="toolbar">
+          <button id="snapBtn" class="btn-soft">Snap</button>
+          <input id="gridSizeInput" type="number" min="5" max="200" step="5" value="20" style="width:80px" />
+          <button id="autoLayoutBtn" class="btn-soft">Organizar grafo</button>
+          <button id="layoutPresetCompactBtn" class="btn-soft">Compacto</button>
+          <button id="layoutPresetBalancedBtn" class="btn-soft">Balanceado</button>
+          <button id="layoutPresetSpreadBtn" class="btn-soft">Espalhar</button>
+          <span class="mini muted">it</span>
+          <input id="layoutIterInput" type="number" min="10" max="3000" step="10" value="200" style="width:80px" />
+          <span class="mini muted">rep</span>
+          <input id="layoutRepInput" type="number" min="0" max="50000" step="500" value="8000" style="width:90px" />
+          <span class="mini muted">K</span>
+          <input id="layoutKInput" type="number" min="0" max="1" step="0.005" value="0.02" style="width:80px" />
+          <span class="mini muted">damp</span>
+          <input id="layoutDampInput" type="number" min="0.5" max="0.99" step="0.01" value="0.85" style="width:80px" />
+          <label class="mini"><input id="layoutCenterInput" type="checkbox" checked /> Centralizar</label>
+          <span class="mini muted">Alinhar:</span>
+          <button id="alignLeftBtn" class="btn-soft">L</button>
+          <button id="alignRightBtn" class="btn-soft">R</button>
+          <button id="alignTopBtn" class="btn-soft">T</button>
+          <button id="alignBottomBtn" class="btn-soft">B</button>
+          <button id="alignCenterXBtn" class="btn-soft">CX</button>
+          <button id="alignCenterYBtn" class="btn-soft">CY</button>
+          <span class="mini muted">Distribuir:</span>
+          <button id="distributeHBtn" class="btn-soft">H</button>
+          <button id="distributeVBtn" class="btn-soft">V</button>
+        </div>
+        <div class="legend">
+          <span class="dot dot-initial"></span><span class="mini">Inicial</span>
+          <span class="dot dot-final"></span><span class="mini">Final</span>
+          <span class="dot dot-halt"></span><span class="mini">HALT…</span>
+        </div>
+        <div class="hr"></div>
+        <div class="row mini muted">Dica: clique em um estado…</div>
+      </div>
+
+      <div class="card grid cols-2">
+        <div>
+          <h2>Simular Palavra</h2>
+          <div class="row">
+            <input type="text" id="wordInput" placeholder="Ex: ABAAB" />
+            <button id="runBtn" class="btn-accent">Rodar</button>
+            <button id="runStartBtn" class="btn-soft">Modo Run</button>
+            <button id="runStepBtn" class="btn-soft" disabled>Passo</button>
+          </div>
+          <div id="runResult" class="mini" aria-live="polite"></div>
+          <div id="runSteps" class="scroll mini" aria-live="polite"></div>
+        </div>
+        <div>
+          <h2>Expressão Regular (AFD → ER)</h2>
+          <div class="row">
+            <label><input type="checkbox" id="allowEpsilon" /> Permitir λ na saída</label>
+            <button id="buildRegexBtn">Gerar ER</button>
+          </div>
+          <div id="regexMsg" class="mini muted"></div>
+          <div id="regexOut" class="pill" style="margin-top:6px; font-weight:700; font-size:15px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Exportar / Importar</h2>
+        <div class="toolbar">
+          <button id="exportBtn" class="btn-soft">Exportar AF</button>
+          <button id="exportPngBtn" class="btn-soft">Exportar PNG</button>
+          <button id="importBtn" class="btn-soft">Importar AF</button>
+          <input type="file" id="importFile" accept="application/json" style="display:none" />
+        </div>
+        <div class="mini muted">Exporta um JSON…</div>
+      </div>
+
+      <div class="card">
+        <h2>Tabela δ (AFD)</h2>
+        <div class="toolbar">
+          <button id="refreshDeltaBtn" class="btn-soft">Atualizar</button>
+          <span class="mini muted">Edite as células…</span>
+        </div>
+        <div id="deltaTable" class="scroll"></div>
+      </div>
+
+      <div class="card">
+        <h2>Exemplos</h2>
+        <div class="row">
+          <select id="examplesSelect">
+            <option value="">Escolha um exemplo…</option>
+          </select>
+          <button id="loadExampleBtn" class="btn-soft">Carregar</button>
+        </div>
+        <div class="mini muted">Carrega um AF/AFD…</div>
+      </div>
+    </div>
+
+    <!-- Coluna do Canvas (4/6) -->
+    <div class="right stack-below-canvas">
+      <div class="card">
+        <h2>Canvas</h2>
+        <div id="canvasWrapper">
+          <svg id="svg">
+            <defs>
+              <marker id="arrow" markerWidth="18" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L10,6 L0,12 z" fill="#cbd5e1"></path>
+              </marker>
+            </defs>
+            <g id="edges"></g>
+            <g id="labels"></g>
+            <g id="initialPointers"></g>
+            <g id="states"></g>
+          </svg>
+        </div>
+        <div class="hr"></div>
+        <div class="mini muted">Transições</div>
+        <div id="transitionsList" class="scroll mini"></div>
+      </div>
+
+      <!-- Conversões/Operações abaixo do Canvas -->
+      <div class="card">
+        <h2>Conversões</h2>
+        <div class="toolbar">
+          <button id="lambdaToNfaBtn" class="btn-soft">AFNλ → AFN</button>
+          <button id="nfaToDfaBtn" class="btn-soft">AFN → AFD</button>
+        </div>
+        <div id="algoSteps" class="mini scroll"></div>
+      </div>
+
+      <div class="card">
+        <h2>Operações entre AFDs</h2>
+        <div class="toolbar">
+          <button id="unionBtn" class="btn-soft">União</button>
+          <button id="intersectionBtn" class="btn-soft">Interseção</button>
+          <button id="differenceBtn" class="btn-soft">Diferença (A \ B)</button>
+          <button id="equivalenceBtn" class="btn-soft">Equivalência</button>
+          <input type="file" id="importFile1" accept="application/json" style="display:none" />
+          <input type="file" id="importFile2" accept="application/json" style="display:none" />
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Operações no AFD atual</h2>
+        <div class="toolbar">
+          <button id="completeDfaBtn" class="btn-soft">Completar AFD</button>
+          <button id="complementBtn" class="btn-soft">Complemento</button>
+          <button id="prefixClosureBtn" class="btn-soft">Fecho por Prefixos</button>
+          <button id="suffixClosureBtn" class="btn-soft">Fecho por Sufixos</button>
+        </div>
+        <div class="mini muted">Para complemento e diferença…</div>
+      </div>
+    </div>
+  </template>
+
+  <!-- ============== Bootstrap: injeta template e define LS_KEY (por hash) ============== -->
+  <script>
+    (function() {
+      const hash = (location.hash || '').toLowerCase();
+      const MODE = hash === '#afn' ? 'afn' : (hash === '#gr' ? 'gr' : 'afd');
+      window.MODE = MODE;
+      window.LS_KEY = MODE === 'afn' ? 'afn_sim_state_v1'
+                    : MODE === 'gr'  ? 'afn_gr_sim_state_v1'
+                    : 'afd_sim_state_v3';
+      // Injeta o template
+      const app = document.getElementById('app');
+      const tpl = document.getElementById('tmpl-' + MODE);
+      app.appendChild(tpl.content.cloneNode(true));
+      // Aba ativa + troca de modo
+      document.querySelectorAll('nav.tabs a').forEach(a => {
+        const m = a.getAttribute('data-mode');
+        if (m === MODE) a.classList.add('active'); else a.classList.remove('active');
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (m === MODE) return;
+          location.hash = '#' + m;
+          location.reload();
+        });
+      });
+      // Alteração manual do hash → recarrega para reconfigurar DOM/LS_KEY
+      window.addEventListener('hashchange', () => location.reload());
+    })();
+  </script>
+
+  <!-- Scripts principais -->
+  <script src="js/core.js"></script>
+  <script src="js/run.js"></script>
+  <script src="js/algoview.js"></script>
+
+  <!-- Carregamento condicional dos módulos de GR -->
+  <script>
+    if (window.MODE === 'gr') {
+      const s1 = document.createElement('script'); s1.src = 'js/regex.js'; document.body.appendChild(s1);
+      const s2 = document.createElement('script'); s2.src = 'js/grammar.js'; document.body.appendChild(s2);
+    }
+  </script>
+
+</body>
 </html>
