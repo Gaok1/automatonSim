@@ -1,5 +1,5 @@
     /* -------------------- Modelo de dados -------------------- */
-    const A = {
+export const A = {
       alphabet: new Set(),
       states: new Map(),            // id -> {id,name,x,y,isInitial,isFinal}
       nextId: 0,
@@ -13,17 +13,17 @@
     const LS_KEY = window.LS_KEY || 'afd_sim_state_v3';
     const IS_AFN = LS_KEY.startsWith('afn');
 
-    const svg = document.getElementById('svg');
+export const svg = document.getElementById('svg');
     const gStates = document.getElementById('states');
     const gEdges = document.getElementById('edges');
     const gLabels = document.getElementById('labels');
     const gInitial = document.getElementById('initialPointers');
 
-    const elAlphabetView = document.getElementById('alphabetView');
+export const elAlphabetView = document.getElementById('alphabetView');
     const elTransitionsList = document.getElementById('transitionsList');
     const elRegexOut = document.getElementById('regexOut');
     const elRegexMsg = document.getElementById('regexMsg');
-    let runHighlight = new Map();
+export let runHighlight = new Map();
     document.getElementById('unionBtn').onclick = () => importTwoNFAs('union');
     document.getElementById('concatBtn').onclick = () => importTwoNFAs('concat');
     document.getElementById('closureBtn').onclick = () => importOneNFAStar();
@@ -31,11 +31,11 @@
 
 
     /* -------------------- Utilidades -------------------- */
-    const keyTS = (s, sym) => `${s}|${sym}`;
-    const id = () => `q${A.nextId++}`;
+export const keyTS = (s, sym) => `${s}|${sym}`;
+export const id = () => `q${A.nextId++}`;
     const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
-    function alphaStr() {
+export function alphaStr() {
       return Array.from(A.alphabet).join(', ');
     }
     function markSelected(id) {
@@ -77,7 +77,7 @@
         initialId: A.initialId,
       };
     }
-    function saveLS() {
+export function saveLS() {
       try { localStorage.setItem(LS_KEY, JSON.stringify(snapshot())); } catch (e) { console.warn('localStorage save failed', e); }
     }
     function loadLS() {
@@ -89,7 +89,7 @@
         return true;
       } catch (e) { console.warn('localStorage load failed', e); return false; }
     }
-    function resetAll() {
+export function resetAll() {
       localStorage.removeItem(LS_KEY);
       A.alphabet = new Set();
       A.states.clear();
@@ -232,7 +232,7 @@
     }
 
     /* -------------------- Canvas: estados (arrastar) -------------------- */
-    function renderStates() {
+export function renderStates() {
       gStates.innerHTML = '';
       gInitial.innerHTML = '';
       for (const s of A.states.values()) {
@@ -480,7 +480,7 @@
     }
 
     /* -------------------- Render geral -------------------- */
-    function renderAll() {
+export function renderAll() {
       renderStates();
       renderEdges();
     }
