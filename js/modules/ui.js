@@ -314,11 +314,12 @@ function setupUIEventListeners() {
       opt.textContent = ex.label;
       sel.appendChild(opt);
     });
-    btn.addEventListener('click', async () => {
+    btn.addEventListener('click', () => {
       const idx = sel.value;
       if (idx === '') return;
       try {
-        const data = await EXAMPLES[Number(idx)].load();
+        const data = EXAMPLES[Number(idx)].data;
+
         restoreFromObject(data);
         saveLS();
         renderAll();
