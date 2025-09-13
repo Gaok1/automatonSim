@@ -75,7 +75,14 @@
       <div class="toolbar">
         <button id="exportBtn" class="btn-soft">Exportar AF</button>
         <button id="importBtn" class="btn-soft">Importar AF</button>
+        <button id="exportPngBtn" class="btn-soft">Exportar PNG</button>
         <input type="file" id="importFile" accept="application/json" style="display:none" />
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <select id="examplesSelect">
+          <option value="">Carregar exemplo...</option>
+        </select>
+        <button id="loadExampleBtn" class="btn-soft">Carregar</button>
       </div>
       <div class="mini muted">Exporta um JSON com Σ, estados, transições, inicial e <code>nextId</code>. Importar
         substituirá o AF atual.</div>

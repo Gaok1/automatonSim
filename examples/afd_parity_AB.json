@@ -1,0 +1,14 @@
+{
+  "version": 3,
+  "alphabet": ["A", "B"],
+  "states": [
+    {"id": "q0", "name": "q0", "x": 180, "y": 200, "isInitial": true, "isFinal": false},
+    {"id": "q1", "name": "q1", "x": 360, "y": 200, "isInitial": false, "isFinal": true}
+  ],
+  "nextId": 2,
+  "transitions": [
+    ["q0|A", ["q1"]],
+    ["q1|B", ["q0"]]
+  ],
+  "initialId": "q0"
+}

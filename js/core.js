@@ -203,6 +203,58 @@ export function resetAll() {
       reader.readAsText(file);
     };
 
+    const exportPngBtn = document.getElementById('exportPngBtn');
+    if (exportPngBtn) {
+      exportPngBtn.onclick = () => {
+        const xml = new XMLSerializer().serializeToString(svg);
+        const svgBlob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = svg.clientWidth;
+          canvas.height = svg.clientHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+          URL.revokeObjectURL(url);
+          const a = document.createElement('a');
+          a.href = canvas.toDataURL('image/png');
+          a.download = 'automato.png';
+          document.body.appendChild(a); a.click(); a.remove();
+        };
+        img.src = url;
+      };
+    }
+
+    const examplesSelect = document.getElementById('examplesSelect');
+    const loadExampleBtn = document.getElementById('loadExampleBtn');
+    if (examplesSelect && loadExampleBtn) {
+      const examples = IS_AFN ? {
+        'λ-automato a ou ab': 'examples/afn_lambda_a_or_ab.json'
+      } : {
+        'Binário divisível por 3': 'examples/afd_binary_divisible_by_3.json',
+        'Termina com a': 'examples/afd_ends_with_a.json',
+        'Paridade A/B': 'examples/afd_parity_AB.json'
+      };
+      for (const [label, path] of Object.entries(examples)) {
+        const opt = document.createElement('option');
+        opt.value = path;
+        opt.textContent = label;
+        examplesSelect.appendChild(opt);
+      }
+      loadExampleBtn.onclick = async () => {
+        const path = examplesSelect.value;
+        if (!path) return;
+        const obj = await fetch(path).then(r => r.json());
+        if (!confirm('Importar irá substituir o AFD atual. Continuar?')) return;
+        restoreFromObject(obj);
+        saveLS();
+        renderAll();
+      };
+    }
+
     function restoreFromObject(obj) {
       // validações básicas
       if (!obj || typeof obj !== 'object') throw new Error('JSON malformado');
