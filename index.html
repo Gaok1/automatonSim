@@ -494,47 +494,10 @@
     </div>
   </template>
 
-  <!-- ============== Bootstrap: injeta template e define LS_KEY (por hash) ============== -->
-  <script>
-    (function() {
-      const hash = (location.hash || '').toLowerCase();
-      const MODE = hash === '#afn' ? 'afn' : (hash === '#gr' ? 'gr' : 'afd');
-      window.MODE = MODE;
-      window.LS_KEY = MODE === 'afn' ? 'afn_sim_state_v1'
-                    : MODE === 'gr'  ? 'afn_gr_sim_state_v1'
-                    : 'afd_sim_state_v3';
-      // Injeta o template
-      const app = document.getElementById('app');
-      const tpl = document.getElementById('tmpl-' + MODE);
-      app.appendChild(tpl.content.cloneNode(true));
-      // Aba ativa + troca de modo
-      document.querySelectorAll('nav.tabs a').forEach(a => {
-        const m = a.getAttribute('data-mode');
-        if (m === MODE) a.classList.add('active'); else a.classList.remove('active');
-        a.addEventListener('click', (e) => {
-          e.preventDefault();
-          if (m === MODE) return;
-          location.hash = '#' + m;
-          location.reload();
-        });
-      });
-      // Alteração manual do hash → recarrega para reconfigurar DOM/LS_KEY
-      window.addEventListener('hashchange', () => location.reload());
-    })();
-  </script>
+  
 
-  <!-- Scripts principais -->
-  <script src="js/core.js"></script>
-  <script src="js/run.js"></script>
-  <script src="js/algoview.js"></script>
-
-  <!-- Carregamento condicional dos módulos de GR -->
-  <script>
-    if (window.MODE === 'gr') {
-      const s1 = document.createElement('script'); s1.src = 'js/regex.js'; document.body.appendChild(s1);
-      const s2 = document.createElement('script'); s2.src = 'js/grammar.js'; document.body.appendChild(s2);
-    }
-  </script>
+  <!-- Entrada única (ES Modules) -->
+  <script type="module" src="js/main.js" defer></script>
 
 </body>
 </html>
