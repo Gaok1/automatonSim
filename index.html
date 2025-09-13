@@ -39,6 +39,7 @@
     <a href="#afd" data-mode="afd">AFD</a>
     <a href="#afn" data-mode="afn">AFN</a>
     <a href="#gr"  data-mode="gr">GR</a>
+    <button id="helpBtn" class="btn-soft" style="margin-left:auto" title="Ajuda (atalhos e dicas)">Ajuda</button>
   </nav>
 
   <!-- Contêiner onde o template ativo será injetado ANTES dos scripts -->
@@ -67,34 +68,11 @@
           <button id="deleteSelectedBtn" class="btn-danger">Excluir</button>
           <button id="editBtn" class="btn-soft" title="Editar (E)">Editar</button>
           <button id="resetBtn" class="btn-danger">Limpar AF</button>
-          <button id="helpBtn" class="btn-soft" title="Ajuda (atalhos e dicas)">Ajuda</button>
         </div>
         <div class="toolbar">
-          <button id="snapBtn" class="btn-soft" title="Snap-to-grid (G)">Snap</button>
-          <input id="gridSizeInput" type="number" min="5" max="200" step="5" value="20" style="width:80px" title="Tamanho da grade (px)" />
-          <button id="autoLayoutBtn" class="btn-soft" title="Organizar grafo automaticamente">Organizar grafo</button>
           <button id="layoutPresetCompactBtn" class="btn-soft">Compacto</button>
           <button id="layoutPresetBalancedBtn" class="btn-soft">Balanceado</button>
           <button id="layoutPresetSpreadBtn" class="btn-soft">Espalhar</button>
-          <span class="mini muted">it</span>
-          <input id="layoutIterInput" type="number" min="10" max="3000" step="10" value="200" style="width:80px" title="Iterações" />
-          <span class="mini muted">rep</span>
-          <input id="layoutRepInput" type="number" min="0" max="50000" step="500" value="8000" style="width:90px" title="Repulsão" />
-          <span class="mini muted">K</span>
-          <input id="layoutKInput" type="number" min="0" max="1" step="0.005" value="0.02" style="width:80px" title="Atração (força de mola)" />
-          <span class="mini muted">damp</span>
-          <input id="layoutDampInput" type="number" min="0.5" max="0.99" step="0.01" value="0.85" style="width:80px" title="Amortecimento" />
-          <label class="mini"><input id="layoutCenterInput" type="checkbox" checked /> Centralizar</label>
-          <span class="mini muted">Alinhar:</span>
-          <button id="alignLeftBtn" class="btn-soft" title="Alinhar Esquerda (L)">L</button>
-          <button id="alignRightBtn" class="btn-soft" title="Alinhar Direita (R)">R</button>
-          <button id="alignTopBtn" class="btn-soft" title="Alinhar Topo (T)">T</button>
-          <button id="alignBottomBtn" class="btn-soft" title="Alinhar Base (B)">B</button>
-          <button id="alignCenterXBtn" class="btn-soft" title="Centralizar X (X)">CX</button>
-          <button id="alignCenterYBtn" class="btn-soft" title="Centralizar Y (Y)">CY</button>
-          <span class="mini muted">Distribuir:</span>
-          <button id="distributeHBtn" class="btn-soft" title="Distribuir Horizontal (H)">H</button>
-          <button id="distributeVBtn" class="btn-soft" title="Distribuir Vertical (V)">V</button>
         </div>
         <div class="legend">
           <span class="dot dot-initial"></span><span class="mini">Inicial</span>
@@ -102,8 +80,6 @@
           <span class="dot dot-halt"></span><span class="mini">HALT (transição ausente)</span>
         </div>
         <div class="hr"></div>
-        <div class="row mini muted">Dica: clique em um estado para selecioná-lo. Use <span class="kbd">C</span> ou o ícone
-          de ligação para conectar: clique na origem e depois no destino para escolher o símbolo.</div>
       </div>
 
       <div class="card grid cols-2">
@@ -234,34 +210,11 @@
           <button id="deleteSelectedBtn" class="btn-danger">Excluir</button>
           <button id="editBtn" class="btn-soft" title="Editar (E)">Editar</button>
           <button id="resetBtn" class="btn-danger">Limpar AF</button>
-          <button id="helpBtn" class="btn-soft" title="Ajuda (atalhos e dicas)">Ajuda</button>
         </div>
         <div class="toolbar">
-          <button id="snapBtn" class="btn-soft" title="Snap-to-grid (G)">Snap</button>
-          <input id="gridSizeInput" type="number" min="5" max="200" step="5" value="20" style="width:80px" title="Tamanho da grade (px)" />
-          <button id="autoLayoutBtn" class="btn-soft">Organizar grafo</button>
           <button id="layoutPresetCompactBtn" class="btn-soft">Compacto</button>
           <button id="layoutPresetBalancedBtn" class="btn-soft">Balanceado</button>
           <button id="layoutPresetSpreadBtn" class="btn-soft">Espalhar</button>
-          <span class="mini muted">it</span>
-          <input id="layoutIterInput" type="number" min="10" max="3000" step="10" value="200" style="width:80px" />
-          <span class="mini muted">rep</span>
-          <input id="layoutRepInput" type="number" min="0" max="50000" step="500" value="8000" style="width:90px" />
-          <span class="mini muted">K</span>
-          <input id="layoutKInput" type="number" min="0" max="1" step="0.005" value="0.02" style="width:80px" />
-          <span class="mini muted">damp</span>
-          <input id="layoutDampInput" type="number" min="0.5" max="0.99" step="0.01" value="0.85" style="width:80px" />
-          <label class="mini"><input id="layoutCenterInput" type="checkbox" checked /> Centralizar</label>
-          <span class="mini muted">Alinhar:</span>
-          <button id="alignLeftBtn" class="btn-soft">L</button>
-          <button id="alignRightBtn" class="btn-soft">R</button>
-          <button id="alignTopBtn" class="btn-soft">T</button>
-          <button id="alignBottomBtn" class="btn-soft">B</button>
-          <button id="alignCenterXBtn" class="btn-soft">CX</button>
-          <button id="alignCenterYBtn" class="btn-soft">CY</button>
-          <span class="mini muted">Distribuir:</span>
-          <button id="distributeHBtn" class="btn-soft">H</button>
-          <button id="distributeVBtn" class="btn-soft">V</button>
         </div>
         <div class="legend">
           <span class="dot dot-initial"></span><span class="mini">Inicial</span>
@@ -269,7 +222,6 @@
           <span class="dot dot-halt"></span><span class="mini">HALT (transição ausente)</span>
         </div>
         <div class="hr"></div>
-        <div class="row mini muted">Dica: clique em um estado para selecioná-lo. Use <span class="kbd">C</span>…</div>
       </div>
 
       <div class="card grid cols-2">
@@ -416,34 +368,11 @@
           <button id="deleteSelectedBtn" class="btn-danger">Excluir</button>
           <button id="editBtn" class="btn-soft" title="Editar (E)">Editar</button>
           <button id="resetBtn" class="btn-danger">Limpar AF</button>
-          <button id="helpBtn" class="btn-soft" title="Ajuda (atalhos e dicas)">Ajuda</button>
         </div>
         <div class="toolbar">
-          <button id="snapBtn" class="btn-soft">Snap</button>
-          <input id="gridSizeInput" type="number" min="5" max="200" step="5" value="20" style="width:80px" />
-          <button id="autoLayoutBtn" class="btn-soft">Organizar grafo</button>
           <button id="layoutPresetCompactBtn" class="btn-soft">Compacto</button>
           <button id="layoutPresetBalancedBtn" class="btn-soft">Balanceado</button>
           <button id="layoutPresetSpreadBtn" class="btn-soft">Espalhar</button>
-          <span class="mini muted">it</span>
-          <input id="layoutIterInput" type="number" min="10" max="3000" step="10" value="200" style="width:80px" />
-          <span class="mini muted">rep</span>
-          <input id="layoutRepInput" type="number" min="0" max="50000" step="500" value="8000" style="width:90px" />
-          <span class="mini muted">K</span>
-          <input id="layoutKInput" type="number" min="0" max="1" step="0.005" value="0.02" style="width:80px" />
-          <span class="mini muted">damp</span>
-          <input id="layoutDampInput" type="number" min="0.5" max="0.99" step="0.01" value="0.85" style="width:80px" />
-          <label class="mini"><input id="layoutCenterInput" type="checkbox" checked /> Centralizar</label>
-          <span class="mini muted">Alinhar:</span>
-          <button id="alignLeftBtn" class="btn-soft">L</button>
-          <button id="alignRightBtn" class="btn-soft">R</button>
-          <button id="alignTopBtn" class="btn-soft">T</button>
-          <button id="alignBottomBtn" class="btn-soft">B</button>
-          <button id="alignCenterXBtn" class="btn-soft">CX</button>
-          <button id="alignCenterYBtn" class="btn-soft">CY</button>
-          <span class="mini muted">Distribuir:</span>
-          <button id="distributeHBtn" class="btn-soft">H</button>
-          <button id="distributeVBtn" class="btn-soft">V</button>
         </div>
         <div class="legend">
           <span class="dot dot-initial"></span><span class="mini">Inicial</span>
@@ -451,7 +380,6 @@
           <span class="dot dot-halt"></span><span class="mini">HALT…</span>
         </div>
         <div class="hr"></div>
-        <div class="row mini muted">Dica: clique em um estado…</div>
       </div>
 
       <div class="card grid cols-2">
