@@ -29,6 +29,7 @@ import {
   suffixClosureCurrentDfa,
 } from './algorithms.js';
 import { pushCrossImport } from './state.js';
+import { EXAMPLES } from './examples.js';
 
 // Helper para ligar eventos de click com verificação
 function onClick(id, handler) { const el = document.getElementById(id); if (el) el.addEventListener('click', handler); }
@@ -303,8 +304,29 @@ function setupUIEventListeners() {
   onClick('helpBtn', () => showHelp());
 
   // Exemplos
-  const EXAMPLES = [ { label: 'AFD: termina com a', path: 'examples/afd_ends_with_a.json' }, { label: 'AFD: múltiplos de 3 (binário)', path: 'examples/afd_binary_divisible_by_3.json' }, { label: 'AFD: alterna A/B (simples)', path: 'examples/afd_parity_AB.json' }, { label: 'AFNλ: a ou ab', path: 'examples/afn_lambda_a_or_ab.json' } ];
-  (function initExamplesMenu() { const sel = document.getElementById('examplesSelect'); const btn = document.getElementById('loadExampleBtn'); if (!sel || !btn) return; for (const ex of EXAMPLES) { const opt = document.createElement('option'); opt.value = ex.path; opt.textContent = ex.label; sel.appendChild(opt); } btn.addEventListener('click', async () => { const v = sel.value; if (!v) return; try { const res = await fetch(v); const data = await res.json(); restoreFromObject(data); saveLS(); renderAll(); } catch (e) { alert('Falha ao carregar exemplo.'); } }); })();
+  (function initExamplesMenu() {
+    const sel = document.getElementById('examplesSelect');
+    const btn = document.getElementById('loadExampleBtn');
+    if (!sel || !btn) return;
+    EXAMPLES.forEach((ex, idx) => {
+      const opt = document.createElement('option');
+      opt.value = String(idx);
+      opt.textContent = ex.label;
+      sel.appendChild(opt);
+    });
+    btn.addEventListener('click', () => {
+      const idx = sel.value;
+      if (idx === '') return;
+      try {
+        const data = EXAMPLES[Number(idx)].data;
+        restoreFromObject(data);
+        saveLS();
+        renderAll();
+      } catch (e) {
+        alert('Falha ao carregar exemplo.');
+      }
+    });
+  })();
 
   // Atalhos de teclado (conexão, edição, mover, deletar)
   document.addEventListener('keydown', ev => {
