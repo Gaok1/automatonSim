@@ -1,3 +1,5 @@
+import { resetAll, id, A, keyTS, alphaStr, renderAll, saveLS, elAlphabetView } from './core.js';
+
 // Constrói um AF a partir de uma gramática regular
 function buildFromGrammar() {
   const raw = document.getElementById('grammarInput').value;

@@ -1,3 +1,5 @@
+import { resetAll, A, alphaStr, renderAll, saveLS, id, keyTS, elAlphabetView } from './core.js';
+
 // Constrói um AFNλ a partir de uma expressão regular usando a construção de Thompson
 function buildFromRegex() {
   const raw = (document.getElementById('regexInput').value || '').trim();
