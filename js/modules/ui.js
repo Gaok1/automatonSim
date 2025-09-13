@@ -319,6 +319,7 @@ function setupUIEventListeners() {
       if (idx === '') return;
       try {
         const data = EXAMPLES[Number(idx)].data;
+
         restoreFromObject(data);
         saveLS();
         renderAll();
