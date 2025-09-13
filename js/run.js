@@ -1,3 +1,5 @@
+// Garantia: se runHighlight não existir ainda (ordem de scripts), cria um novo Map
+if (typeof runHighlight === 'undefined') { var runHighlight = new Map(); }
 const elRunResult = document.getElementById('runResult');
 const elRunSteps = document.getElementById('runSteps');
 const runBtn = document.getElementById('runBtn');
@@ -20,19 +22,11 @@ function namesOf(set) {
   return Array.from(set).map(id => A.states.get(id)?.name || id).join(', ');
 }
 
+/** Wrapper para usar o ε‑fecho compartilhado em core.js. */
 function epsilonClosure(states) {
-  const stack = Array.from(states);
-  const closure = new Set(states);
-  while (stack.length) {
-    const s = stack.pop();
-    const k = keyTS(s, 'λ');
-    if (A.transitions.has(k)) {
-      for (const nxt of A.transitions.get(k)) {
-        if (!closure.has(nxt)) { closure.add(nxt); stack.push(nxt); }
-      }
-    }
-  }
-  return closure;
+  return typeof epsilonClosureMap === 'function'
+    ? epsilonClosureMap(states, A.transitions)
+    : states; // fallback
 }
 
 runBtn.onclick = () => {
@@ -159,6 +153,7 @@ runStepBtn.onclick = () => {
   }
 };
 
+/** Adiciona uma linha à trilha de passos da simulação. */
 function addStep(t) {
   const div = document.createElement('div');
   div.textContent = t;
@@ -170,5 +165,12 @@ document.querySelectorAll('button').forEach(btn => {
   if (!['runBtn', 'runStartBtn', 'runStepBtn'].includes(btn.id)) {
     btn.addEventListener('click', resetRunVisuals);
   }
+/**
+ * Simulação (execução) de palavras no AF atual.
+ * - "Rodar": processa a palavra inteira e colore estados finais/visitados.
+ * - "Modo Run": permite avançar símbolo a símbolo, registrando os passos.
+ *
+ * Dica: Em AFN usamos ε‑fecho a cada passo, logo o conjunto de estados atuais
+ * pode conter vários ids simultaneamente.
+ */
 });
-

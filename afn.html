@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!--
+  Página AFN/AFNλ: permite edições não-determinísticas e λ-transições.
+  Ferramentas de conversão: AFNλ → AFN e AFN → AFD (com opção de abrir no AFD).
+-->
 <html lang="pt-BR">
 
 <head>
@@ -16,7 +20,7 @@
     <a href="gr.html">GR</a>
   </nav>
 
-  <div class="left">
+  <div class="left" style="min-width:420px">
     <div class="card">
       <h2>Alfabeto</h2>
       <div class="row">
@@ -35,7 +39,14 @@
         <button id="toggleInitialBtn" class="btn-soft">Alternar Inicial</button>
         <button id="toggleFinalBtn" class="btn-soft">Alternar Final</button>
         <button id="deleteSelectedBtn" class="btn-danger">Excluir Selecionado</button>
+        <button id="editBtn" class="btn-soft" title="Editar (E)">Editar</button>
         <button id="resetBtn" class="btn-danger">Limpar AF</button>
+        <button id="helpBtn" class="btn-soft" title="Ajuda (atalhos e dicas)">Ajuda</button>
+      </div>
+      <div class="toolbar">
+        <button id="layoutPresetCompactBtn" class="btn-soft" title="Preset: compacto (agrupa)">Compacto</button>
+        <button id="layoutPresetBalancedBtn" class="btn-soft" title="Preset: balanceado">Balanceado</button>
+        <button id="layoutPresetSpreadBtn" class="btn-soft" title="Preset: espalhar">Espalhar</button>
       </div>
       <div class="legend">
         <span class="dot dot-initial"></span><span class="mini">Inicial</span>
@@ -43,8 +54,6 @@
         <span class="dot dot-halt"></span><span class="mini">HALT (transição ausente)</span>
       </div>
       <div class="hr"></div>
-      <div class="row mini muted">Dica: clique em um estado para selecioná-lo. Use <span class="kbd">C</span> ou o ícone
-        de ligação para conectar: clique na origem e depois no destino para escolher o símbolo.</div>
     </div>
 
     <div class="card grid cols-2">
@@ -70,59 +79,77 @@
       </div>
     </div>
 
+  <div class="card">
+    <h2>Exportar / Importar</h2>
+    <div class="toolbar">
+      <button id="exportBtn" class="btn-soft">Exportar AF</button>
+      <button id="exportPngBtn" class="btn-soft">Exportar PNG</button>
+      <button id="importBtn" class="btn-soft">Importar AF</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none" />
+    </div>
+    <div class="mini muted">Exporta um JSON com Σ, estados, transições, inicial e <code>nextId</code>. Importar
+      substituirá o AF atual.</div>
+  </div>
+
+  
+    <!-- Exemplos ficam na barra lateral esquerda -->
     <div class="card">
-      <h2>Exportar / Importar</h2>
-      <div class="toolbar">
-        <button id="exportBtn" class="btn-soft">Exportar AF</button>
-        <button id="importBtn" class="btn-soft">Importar AF</button>
-        <input type="file" id="importFile" accept="application/json" style="display:none" />
+      <h2>Exemplos</h2>
+      <div class="row">
+        <select id="examplesSelect">
+          <option value="">Escolha um exemplo…</option>
+        </select>
+        <button id="loadExampleBtn" class="btn-soft">Carregar</button>
       </div>
-      <div class="mini muted">Exporta um JSON com Σ, estados, transições, inicial e <code>nextId</code>. Importar
-        substituirá o AF atual.</div>
+      <div class="mini muted">Carrega um AF/AFD de exemplos prontos desta biblioteca.</div>
+    </div>
+  </div>
+
+  <div class="right" style="flex:1.8">
+    <div class="card">
+      <h2>Canvas</h2>
+      <div id="canvasWrapper">
+        <svg id="svg">
+          <defs>
+            <marker id="arrow" markerWidth="18" markerHeight="12" refX="10" refY="6" orient="auto"
+              markerUnits="strokeWidth">
+              <path d="M0,0 L10,6 L0,12 z" fill="#cbd5e1"></path>
+            </marker>
+          </defs>
+          <g id="edges"></g>
+          <g id="labels"></g>
+          <g id="initialPointers"></g>
+          <g id="states"></g>
+        </svg>
+      </div>
+      <div class="hr"></div>
+      <div class="mini muted">Transições</div>
+      <div id="transitionsList" class="scroll mini"></div>
     </div>
 
+    <!-- Conversões e operações AFNλ logo abaixo do Canvas -->
     <div class="card">
       <h2>Conversões</h2>
       <div class="toolbar">
         <button id="lambdaToNfaBtn" class="btn-soft">AFNλ → AFN</button>
         <button id="nfaToDfaBtn" class="btn-soft">AFN → AFD</button>
+        <button id="nfaToDfaOpenBtn" class="btn-soft">AFN → AFD e abrir</button>
       </div>
       <div id="algoSteps" class="mini scroll"></div>
     </div>
-  </div>
 
-  <div class="right card" style="flex:1.2">
-    <h2>Canvas</h2>
-    <div id="canvasWrapper">
-      <svg id="svg">
-        <defs>
-          <marker id="arrow" markerWidth="18" markerHeight="12" refX="10" refY="6" orient="auto"
-            markerUnits="strokeWidth">
-            <path d="M0,0 L10,6 L0,12 z" fill="#cbd5e1"></path>
-          </marker>
-        </defs>
-        <g id="edges"></g>
-        <g id="labels"></g>
-        <g id="initialPointers"></g>
-        <g id="states"></g>
-      </svg>
-    </div>
-    <div class="hr"></div>
-    <div class="mini muted">Transições</div>
-    <div id="transitionsList" class="scroll mini"></div>
-  </div>
-
-
-  <div class="card">
-    <h2>Operações AFNλ</h2>
-    <div class="toolbar">
-      <button id="unionBtn" class="btn-soft">União</button>
-      <button id="concatBtn" class="btn-soft">Concatenação</button>
-      <button id="closureBtn" class="btn-soft">Fecho</button>
-      <input type="file" id="importFile1" accept="application/json" style="display:none" />
-      <input type="file" id="importFile2" accept="application/json" style="display:none" />
+    <div class="card">
+      <h2>Operações AFNλ</h2>
+      <div class="toolbar">
+        <button id="unionBtn" class="btn-soft">União</button>
+        <button id="concatBtn" class="btn-soft">Concatenação</button>
+        <button id="closureBtn" class="btn-soft">Fecho</button>
+        <input type="file" id="importFile1" accept="application/json" style="display:none" />
+        <input type="file" id="importFile2" accept="application/json" style="display:none" />
+      </div>
     </div>
   </div>
+
 
     <script>window.LS_KEY='afn_sim_state_v1';</script>
     <script src="js/core.js"></script>

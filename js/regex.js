@@ -1,4 +1,8 @@
-// Constrói um AFNλ a partir de uma expressão regular usando a construção de Thompson
+/**
+ * ER → AFNλ (Thompson): cada operador (concatenação, união, fecho) vira um pequeno
+ * "bloco de NFA" que compomos para formar o automato final. Usamos uma etapa
+ * intermediária de conversão para notação pós-fixa (Shunting-yard) para simplificar.
+ */
 function buildFromRegex() {
   const raw = (document.getElementById('regexInput').value || '').trim();
   if (!raw) return;
@@ -11,6 +15,7 @@ function buildFromRegex() {
     A.initialId = result.start;
     A.alphabet = result.alphabet;
     elAlphabetView.textContent = `Σ = { ${alphaStr()} }`;
+    if (window.bumpTransitionsVersion) bumpTransitionsVersion();
     renderAll();
     saveLS();
   } catch (e) {
@@ -20,6 +25,10 @@ function buildFromRegex() {
 
 document.getElementById('buildFromRegexBtn').onclick = buildFromRegex;
 
+/**
+ * Converte ER infixa para pós-fixa (RPN) inserindo concatenação explícita
+ * e respeitando precedência: * > . > |. Usa variação de Shunting-yard.
+ */
 function regexToPostfix(re) {
   re = re.replace(/\s+/g, '').replace(/∪/g, '|').replace(/ε/g, 'λ');
   const tokens = re.split('');
@@ -61,15 +70,21 @@ function regexToPostfix(re) {
   return out;
 }
 
+/** Retorna se há concatenação implícita entre dois tokens vizinhos. */
 function needsConcat(a, b) {
   return (isLiteral(a) || a === ')' || a === '*' || a === 'λ') &&
          (isLiteral(b) || b === '(' || b === 'λ');
 }
 
+/** Um literal é um símbolo de Σ (a-z, A-Z, 0-9). */
 function isLiteral(c) {
   return /^[A-Za-z0-9]$/.test(c);
 }
 
+/**
+ * Monta o AFNλ a partir da expressão em pós-fixa, empilhando fragmentos (start,end)
+ * e conectando com λ a cada operador.
+ */
 function buildFromPostfix(post) {
   const stack = [];
   const alphabet = new Set();
