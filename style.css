@@ -1,3 +1,8 @@
+    /*
+     * Estilos do simulador (tema escuro) e do canvas SVG.
+     * Mantemos classes semânticas (.state, .edge, .edge-label) para conectar
+     * a lógica visual ao conteúdo didático (estados/arestas/rótulos).
+     */
     :root {
       --bg: #0f172a;
       /* slate-900 */
@@ -232,6 +237,8 @@
       stroke: var(--accent);
       stroke-width: 2.6
     }
+
+    /* selection rectangle styles added inline from JS */
 
     .edge-label {
       fill: #e2e8f0;
