@@ -307,12 +307,48 @@
       font-size: 12px
     }
 
+    .success {
+      color: var(--ok);
+      font-weight: 600;
+    }
+
+    .warning {
+      color: var(--warn);
+      font-weight: 600;
+    }
+
+    .error {
+      color: var(--danger);
+      font-weight: 600;
+    }
+
     .scroll {
       max-height: 180px;
       overflow: auto;
       border: 1px dashed rgba(148, 163, 184, .25);
       padding: 8px;
       border-radius: 10px
+    }
+
+    .production-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 220px;
+      overflow: auto;
+    }
+
+    .production-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 8px;
+      background: rgba(148, 163, 184, .12);
+      border-radius: 8px;
     }
 
     .hr {

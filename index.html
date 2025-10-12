@@ -39,6 +39,7 @@
     <a href="#afd" data-mode="afd">AFD</a>
     <a href="#afn" data-mode="afn">AFN</a>
     <a href="#gr"  data-mode="gr">GR</a>
+    <a href="#glc" data-mode="glc">GLC/AP</a>
     <button id="helpBtn" class="btn-soft" style="margin-left:auto" title="Ajuda (atalhos e dicas)">Ajuda</button>
   </nav>
 
@@ -490,6 +491,82 @@
           <button id="suffixClosureBtn" class="btn-soft">Fecho por Sufixos</button>
         </div>
         <div class="mini muted">Para complemento e diferença…</div>
+      </div>
+    </div>
+  </template>
+
+  <!-- ===================== TEMPLATE: GLC/AP ===================== -->
+  <template id="tmpl-glc">
+    <div class="left">
+      <div class="card">
+        <h2>Gramática Livre de Contexto G = (V, Σ, P, S)</h2>
+        <div class="grid">
+          <label for="cfgVariables">Variáveis (V)</label>
+          <input type="text" id="cfgVariables" placeholder="Ex: S,A,B" />
+          <label for="cfgTerminals">Terminais (Σ)</label>
+          <input type="text" id="cfgTerminals" placeholder="Ex: a,b" />
+          <label for="cfgStart">Símbolo inicial (S)</label>
+          <input type="text" id="cfgStart" placeholder="Ex: S" />
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <button id="cfgApplySymbolsBtn" class="btn-accent">Aplicar conjuntos</button>
+        </div>
+        <div id="cfgStatus" class="mini muted" style="margin-top:8px;">Informe conjuntos e símbolo inicial para começar.</div>
+        <div class="mini muted" style="margin-top:6px;">Dica: utilize letras maiúsculas para variáveis. Produções aceitam λ (lambda) e símbolos separados por espaço.</div>
+      </div>
+
+      <div class="card">
+        <h2>Produções (P)</h2>
+        <div class="row">
+          <input type="text" id="cfgProductionLhs" placeholder="Ex: S" style="max-width:80px;" />
+          <span class="muted">→</span>
+          <input type="text" id="cfgProductionRhs" placeholder="Ex: a S b" style="flex:1;" />
+          <button id="cfgAddProductionBtn" class="btn-soft">Adicionar</button>
+        </div>
+        <div class="mini muted" style="margin-top:6px;">Digite uma produção por vez. Use λ para a produção vazia.</div>
+        <ul id="cfgProductionsList" class="production-list" style="margin-top:8px;"></ul>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="card">
+        <h2>Derivação à Esquerda e Árvore</h2>
+        <div class="row">
+          <input type="text" id="cfgDerivationWord" placeholder="Sentença. Ex: a a b b" />
+          <button id="cfgDerivationBtn" class="btn-accent">Derivar</button>
+          <button id="cfgVerifyBtn" class="btn-soft">Derivar e simular</button>
+        </div>
+        <div class="mini muted" style="margin-top:6px;">A palavra pode ser escrita com ou sem espaços. λ representa a cadeia vazia.</div>
+        <div class="grid cols-2" style="margin-top:12px;">
+          <div>
+            <h3 class="mini muted">Sentenciais</h3>
+            <pre id="cfgDerivationOutput" class="scroll" aria-live="polite"></pre>
+          </div>
+          <div>
+            <h3 class="mini muted">Árvore de Derivação</h3>
+            <pre id="cfgParseTreeOutput" class="scroll" aria-live="polite"></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Forma Normal de Chomsky (FNC)</h2>
+        <button id="cfgCnfBtn" class="btn-soft">Converter para FNC</button>
+        <pre id="cfgCnfOutput" class="scroll" style="margin-top:8px;"></pre>
+      </div>
+
+      <div class="card">
+        <h2>Autômato de Pilha (GLC → AP)</h2>
+        <div class="row">
+          <button id="cfgToPdaBtn" class="btn-accent">Gerar AP</button>
+          <input type="text" id="cfgPdaWord" placeholder="Sentença para simular" />
+          <button id="cfgPdaSimulateBtn" class="btn-soft">Simular AP</button>
+        </div>
+        <div class="mini muted" style="margin-top:6px;">Simulação com pilha inicial contendo marca de fundo. Aceita quando a pilha fica vazia e o estado final é alcançado.</div>
+        <h3 class="mini muted" style="margin-top:12px;">Transições δ</h3>
+        <pre id="cfgPdaOutput" class="scroll"></pre>
+        <h3 class="mini muted" style="margin-top:12px;">Configurações Instantâneas</h3>
+        <pre id="cfgPdaSimulationOutput" class="scroll" aria-live="polite"></pre>
       </div>
     </div>
   </template>
