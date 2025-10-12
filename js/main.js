@@ -27,7 +27,9 @@ app.appendChild(tpl.content.cloneNode(true));
 // Tabs (navegação)
 document.querySelectorAll('nav.tabs a').forEach(a => {
   const m = a.getAttribute('data-mode');
+  const href = a.getAttribute('href') || '';
   if (m === MODE) a.classList.add('active'); else a.classList.remove('active');
+  if (!href.startsWith('#')) return;
   a.addEventListener('click', (e) => {
     e.preventDefault();
     if (m === MODE) return;
