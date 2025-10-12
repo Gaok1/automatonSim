@@ -962,8 +962,8 @@
     return Array.from(new Set(String(str).split(",").map((s) => s.trim()).filter(Boolean)));
   }
   function exportCanvasPng() {
-    const { svg: svg2 } = getSvgRefs();
-    if (!svg2) return;
+    const { svg } = getSvgRefs();
+    if (!svg) return;
     function collectCssText() {
       let css = "";
       try {
@@ -978,14 +978,14 @@
       }
       return css;
     }
-    const svgNode = svg2.cloneNode(true);
+    const svgNode = svg.cloneNode(true);
     const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style");
     styleEl.setAttribute("type", "text/css");
     styleEl.textContent = collectCssText() || "";
     svgNode.insertBefore(styleEl, svgNode.firstChild);
     const finalize = () => {
-      const bboxW = svg2.clientWidth;
-      const bboxH = svg2.clientHeight;
+      const bboxW = svg.clientWidth;
+      const bboxH = svg.clientHeight;
       svgNode.setAttribute("width", String(bboxW));
       svgNode.setAttribute("height", String(bboxH));
       svgNode.setAttribute("viewBox", `0 0 ${bboxW} ${bboxH}`);
@@ -1024,8 +1024,8 @@
     finalize();
   }
   function renderStates() {
-    const { svg: svg2, gStates, gInitial } = getSvgRefs();
-    if (!svg2 || !gStates || !gInitial) return;
+    const { svg, gStates, gInitial } = getSvgRefs();
+    if (!svg || !gStates || !gInitial) return;
     gStates.innerHTML = "";
     gInitial.innerHTML = "";
     for (const s of A.states.values()) {
@@ -1322,15 +1322,15 @@ Separe por v\xEDrgula.`, current.sort().join(","));
     updateAlphabetView();
   }
   function startDrag(ev, sid, wasSelectedOnDown = false) {
-    const { svg: svg2 } = getSvgRefs();
-    if (!svg2) return;
+    const { svg } = getSvgRefs();
+    if (!svg) return;
     const movingIds = A.selectedIds.has(sid) && A.selectedIds.size > 0 ? Array.from(A.selectedIds) : [sid];
     const movingStates = movingIds.map((id2) => A.states.get(id2)).filter(Boolean);
-    const pt = svg2.createSVGPoint();
+    const pt = svg.createSVGPoint();
     const starts = new Map(movingStates.map((s) => [s.id, { x: s.x, y: s.y }]));
     pt.x = ev.clientX;
     pt.y = ev.clientY;
-    const m = svg2.getScreenCTM().inverse();
+    const m = svg.getScreenCTM().inverse();
     let p0 = pt.matrixTransform(m);
     let rafPending = false;
     let lastClient = { x: ev.clientX, y: ev.clientY };
@@ -1343,8 +1343,8 @@ Separe por v\xEDrgula.`, current.sort().join(","));
       const dx = p.x - p0.x, dy = p.y - p0.y;
       for (const ms of movingStates) {
         const st = starts.get(ms.id);
-        ms.x = clamp(st.x + dx, 30, svg2.clientWidth - 30);
-        ms.y = clamp(st.y + dy, 30, svg2.clientHeight - 30);
+        ms.x = clamp(st.x + dx, 30, svg.clientWidth - 30);
+        ms.y = clamp(st.y + dy, 30, svg.clientHeight - 30);
       }
       if (Math.abs(dx) > 1 || Math.abs(dy) > 1) __dragMoved = true;
       renderAll();
@@ -1787,15 +1787,15 @@ Separe por v\xEDrgula. \u03A3 = { ${syms.join(", ")} }`, defaultSym);
       if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(ev.key)) {
         const ids = A.selectedIds.size ? Array.from(A.selectedIds) : A.selectedStateId ? [A.selectedStateId] : [];
         if (ids.length) {
-          const { svg: svg3 } = getSvgRefs();
+          const { svg: svg2 } = getSvgRefs();
           const step = 5 * (ev.shiftKey ? 2 : 1);
           for (const id0 of ids) {
             const s = A.states.get(id0);
-            if (!s || !svg3) continue;
-            if (ev.key === "ArrowLeft") s.x = clamp(s.x - step, 30, svg3.clientWidth - 30);
-            if (ev.key === "ArrowRight") s.x = clamp(s.x + step, 30, svg3.clientWidth - 30);
-            if (ev.key === "ArrowUp") s.y = clamp(s.y - step, 30, svg3.clientHeight - 30);
-            if (ev.key === "ArrowDown") s.y = clamp(s.y + step, 30, svg3.clientHeight - 30);
+            if (!s || !svg2) continue;
+            if (ev.key === "ArrowLeft") s.x = clamp(s.x - step, 30, svg2.clientWidth - 30);
+            if (ev.key === "ArrowRight") s.x = clamp(s.x + step, 30, svg2.clientWidth - 30);
+            if (ev.key === "ArrowUp") s.y = clamp(s.y - step, 30, svg2.clientHeight - 30);
+            if (ev.key === "ArrowDown") s.y = clamp(s.y + step, 30, svg2.clientHeight - 30);
           }
           renderAll();
           saveLS();
@@ -1888,17 +1888,17 @@ Atuais: ${syms.sort().join(", ")}`, syms.sort().join(","));
         }
       }
     });
-    const { svg: svg2 } = getSvgRefs();
-    if (svg2) {
-      svg2.addEventListener("click", () => {
+    const { svg } = getSvgRefs();
+    if (svg) {
+      svg.addEventListener("click", () => {
         setSelectedEdge(null);
       });
-      svg2.addEventListener("mousedown", (ev) => {
+      svg.addEventListener("mousedown", (ev) => {
         if (ev.target.closest && ev.target.closest("g.state")) return;
         if (!ev.shiftKey) return;
         ev.preventDefault();
-        const pt = svg2.createSVGPoint();
-        const m = svg2.getScreenCTM().inverse();
+        const pt = svg.createSVGPoint();
+        const m = svg.getScreenCTM().inverse();
         pt.x = ev.clientX;
         pt.y = ev.clientY;
         let p0 = pt.matrixTransform(m);
@@ -1908,7 +1908,7 @@ Atuais: ${syms.sort().join(", ")}`, syms.sort().join(","));
         rect.setAttribute("stroke", "var(--accent)");
         rect.setAttribute("stroke-dasharray", "4 2");
         rect.setAttribute("rx", "4");
-        svg2.appendChild(rect);
+        svg.appendChild(rect);
         function update() {
           const x = Math.min(x0, x1), y = Math.min(y0, y1);
           const w = Math.abs(x1 - x0), h = Math.abs(y1 - y0);
@@ -1928,7 +1928,7 @@ Atuais: ${syms.sort().join(", ")}`, syms.sort().join(","));
         function onUp() {
           window.removeEventListener("mousemove", onMove);
           window.removeEventListener("mouseup", onUp);
-          svg2.removeChild(rect);
+          svg.removeChild(rect);
           const x = Math.min(x0, x1), y = Math.min(y0, y1);
           const w = Math.abs(x1 - x0), h = Math.abs(y1 - y0);
           if (w < 2 && h < 2) return;
@@ -1949,9 +1949,9 @@ Atuais: ${syms.sort().join(", ")}`, syms.sort().join(","));
     onClick("helpBtn", () => showHelp());
   }
   function autoLayout(params) {
-    const { svg: svg2 } = getSvgRefs();
-    if (!svg2) return;
-    const W = svg2.clientWidth || 800, H = svg2.clientHeight || 500;
+    const { svg } = getSvgRefs();
+    if (!svg) return;
+    const W = svg.clientWidth || 800, H = svg.clientHeight || 500;
     const nodes = Array.from(A.states.values());
     if (nodes.length <= 1) return;
     const edges = [];
@@ -2302,8 +2302,8 @@ Atuais: ${syms.sort().join(", ")}`, syms.sort().join(","));
         stepRun = null;
       }
     };
-    const svg2 = document.getElementById("svg");
-    if (svg2) svg2.addEventListener("mousedown", resetRunVisuals);
+    const svg = document.getElementById("svg");
+    if (svg) svg.addEventListener("mousedown", resetRunVisuals);
     document.querySelectorAll("button").forEach((btn) => {
       if (!["runBtn", "runStartBtn", "runStepBtn"].includes(btn.id)) {
         btn.addEventListener("click", resetRunVisuals);
@@ -2638,19 +2638,668 @@ Atuais: ${syms.sort().join(", ")}`, syms.sort().join(","));
     A.initialId = void 0;
   }
 
+  // js/modules/pda.js
+  var LAMBDA = "\u03BB";
+  var PushdownAutomaton = class _PushdownAutomaton {
+    constructor({ states, inputAlphabet, stackAlphabet, transitions = [], initialState, finalStates, bottomSymbol = "$" }) {
+      this.states = new Set(states);
+      this.inputAlphabet = new Set(inputAlphabet);
+      this.stackAlphabet = new Set(stackAlphabet);
+      this.initialState = initialState;
+      this.finalStates = new Set(finalStates);
+      this.bottomSymbol = bottomSymbol;
+      this.transitions = [];
+      this.transitionsByState = /* @__PURE__ */ new Map();
+      transitions.forEach((t) => this.addTransition(t.from, t.read, t.pop, t.to, t.push));
+    }
+    static empilha(stack, symbols) {
+      const out = stack.slice();
+      if (!Array.isArray(symbols)) return out;
+      for (let i = symbols.length - 1; i >= 0; i--) {
+        const sym = symbols[i];
+        if (!sym || sym === LAMBDA) continue;
+        out.push(sym);
+      }
+      return out;
+    }
+    static desempilha(stack) {
+      if (!stack.length) return stack.slice();
+      const out = stack.slice();
+      out.pop();
+      return out;
+    }
+    static topo(stack) {
+      return stack.length ? stack[stack.length - 1] : LAMBDA;
+    }
+    addTransition(from, read, pop, to, push = []) {
+      const trans = {
+        from,
+        read: read || LAMBDA,
+        pop: pop || LAMBDA,
+        to,
+        push: Array.isArray(push) ? push.filter((s) => s && s !== LAMBDA) : []
+      };
+      this.transitions.push(trans);
+      if (!this.transitionsByState.has(from)) this.transitionsByState.set(from, []);
+      this.transitionsByState.get(from).push(trans);
+      this.states.add(from);
+      this.states.add(to);
+      if (trans.read !== LAMBDA) this.inputAlphabet.add(trans.read);
+      if (trans.pop !== LAMBDA) this.stackAlphabet.add(trans.pop);
+      trans.push.forEach((sym) => this.stackAlphabet.add(sym));
+    }
+    getTransitions(from) {
+      return this.transitionsByState.get(from) || [];
+    }
+    /**
+     * Simula o AP seguindo o algoritmo do professor Zenilton.
+     * A palavra de entrada pode ser uma string ou array de tokens.
+     * Retorna { accepted: boolean, log: string[] }
+     */
+    simulate(word) {
+      const tokens = Array.isArray(word) ? word.slice() : tokenizeWord(word);
+      const queue = [{
+        state: this.initialState,
+        index: 0,
+        stack: [],
+        log: []
+      }];
+      const visited = /* @__PURE__ */ new Set();
+      let iterations = 0;
+      while (queue.length && iterations < 2e3) {
+        iterations++;
+        const cfg = queue.shift();
+        const remaining = tokens.slice(cfg.index).join(" ") || LAMBDA;
+        const stackDisplay = cfg.stack.length ? cfg.stack.join(" ") : LAMBDA;
+        const currentConfig = `[${cfg.state}, ${remaining}, ${stackDisplay}]`;
+        const path = cfg.log.concat(currentConfig);
+        const key = `${cfg.state}|${cfg.index}|${cfg.stack.join(",")}`;
+        if (visited.has(key)) continue;
+        visited.add(key);
+        if (cfg.index === tokens.length && this.finalStates.has(cfg.state) && cfg.stack.length === 0) {
+          return { accepted: true, log: path };
+        }
+        const transitions = this.getTransitions(cfg.state);
+        for (const tr of transitions) {
+          const canRead = tr.read === LAMBDA ? true : cfg.index < tokens.length && tokens[cfg.index] === tr.read;
+          if (!canRead) continue;
+          const top = _PushdownAutomaton.topo(cfg.stack);
+          if (tr.pop !== LAMBDA) {
+            if (top !== tr.pop) continue;
+          }
+          const newStack = cfg.stack.slice();
+          if (tr.pop !== LAMBDA) newStack.pop();
+          const pushed = _PushdownAutomaton.empilha(newStack, tr.push);
+          const newIndex = tr.read === LAMBDA ? cfg.index : cfg.index + 1;
+          queue.push({
+            state: tr.to,
+            index: newIndex,
+            stack: pushed,
+            log: path
+          });
+        }
+      }
+      return { accepted: false, log: [] };
+    }
+    describeTransitions() {
+      const lines = [];
+      for (const tr of this.transitions) {
+        const pushStr = tr.push.length ? tr.push.join(" ") : LAMBDA;
+        lines.push(`\u03B4(${tr.from}, ${tr.read}, ${tr.pop}) = (${tr.to}, ${pushStr})`);
+      }
+      return lines.join("\n");
+    }
+    static fromContextFreeGrammar(grammar) {
+      if (!grammar || !grammar.startSymbol) throw new Error("Gram\xE1tica inv\xE1lida para convers\xE3o em AP.");
+      const bottom = "\u22A5";
+      const startState = "qInicio";
+      const finalState = "qFim";
+      const pda = new _PushdownAutomaton({
+        states: [startState, finalState],
+        inputAlphabet: Array.from(grammar.terminals),
+        stackAlphabet: [...grammar.variables, ...grammar.terminals, bottom],
+        transitions: [],
+        initialState: startState,
+        finalStates: [finalState],
+        bottomSymbol: bottom
+      });
+      pda.addTransition(startState, LAMBDA, LAMBDA, finalState, [grammar.startSymbol, bottom]);
+      for (const { lhs, rhs } of grammar.listProductions()) {
+        const push = rhs.length ? rhs : [LAMBDA];
+        pda.addTransition(finalState, LAMBDA, lhs, finalState, push);
+      }
+      for (const t of grammar.terminals) {
+        pda.addTransition(finalState, t, t, finalState, []);
+      }
+      pda.addTransition(finalState, LAMBDA, bottom, finalState, []);
+      return pda;
+    }
+  };
+  function tokenizeWord(value) {
+    if (!value) return [];
+    if (Array.isArray(value)) return value.filter(Boolean);
+    const trimmed = String(value).trim();
+    if (!trimmed || trimmed === LAMBDA || trimmed.toLowerCase() === "lambda" || trimmed.toLowerCase() === "\u03B5" || trimmed.toLowerCase() === "epsilon") {
+      return [];
+    }
+    if (trimmed.includes(" ")) {
+      return trimmed.split(/\s+/).filter(Boolean);
+    }
+    return trimmed.split("").filter(Boolean);
+  }
+
+  // js/modules/cfg.js
+  var ContextFreeGrammar = class _ContextFreeGrammar {
+    constructor() {
+      this.variables = /* @__PURE__ */ new Set();
+      this.terminals = /* @__PURE__ */ new Set();
+      this.startSymbol = "";
+      this.productions = /* @__PURE__ */ new Map();
+      this._prodId = 0;
+    }
+    setVariables(list) {
+      this.variables = new Set(list.filter(Boolean));
+      for (const lhs of Array.from(this.productions.keys())) {
+        if (!this.variables.has(lhs)) this.productions.delete(lhs);
+      }
+    }
+    setTerminals(list) {
+      this.terminals = new Set(list.filter(Boolean));
+    }
+    setStartSymbol(symbol) {
+      if (!symbol) throw new Error("Informe um s\xEDmbolo inicial.");
+      if (!this.variables.has(symbol)) throw new Error("O s\xEDmbolo inicial deve estar nas vari\xE1veis.");
+      this.startSymbol = symbol;
+    }
+    addProduction(lhs, rhsTokens) {
+      if (!lhs) throw new Error("Informe o lado esquerdo.");
+      if (!this.variables.has(lhs)) throw new Error(`Vari\xE1vel desconhecida: ${lhs}`);
+      const cleanRhs = rhsTokens.filter(Boolean);
+      if (!this.productions.has(lhs)) this.productions.set(lhs, []);
+      const arr = this.productions.get(lhs);
+      const existing = arr.find((p) => arraysEqual(p.rhs, cleanRhs));
+      if (existing) return existing.id;
+      const id2 = `p${this._prodId++}`;
+      arr.push({ id: id2, rhs: cleanRhs });
+      return id2;
+    }
+    removeProduction(id2) {
+      for (const [lhs, arr] of this.productions.entries()) {
+        const idx = arr.findIndex((p) => p.id === id2);
+        if (idx >= 0) {
+          arr.splice(idx, 1);
+          if (!arr.length) this.productions.delete(lhs);
+          return true;
+        }
+      }
+      return false;
+    }
+    listProductions() {
+      const out = [];
+      for (const [lhs, arr] of this.productions.entries()) {
+        for (const prod of arr) {
+          out.push({ lhs, rhs: prod.rhs.slice(), id: prod.id });
+        }
+      }
+      return out.sort((a, b) => a.lhs.localeCompare(b.lhs) || a.id.localeCompare(b.id));
+    }
+    clone() {
+      const g = new _ContextFreeGrammar();
+      g.variables = new Set(this.variables);
+      g.terminals = new Set(this.terminals);
+      g.startSymbol = this.startSymbol;
+      g._prodId = this._prodId;
+      for (const [lhs, arr] of this.productions.entries()) {
+        g.productions.set(lhs, arr.map((p) => ({ id: p.id, rhs: p.rhs.slice() })));
+      }
+      return g;
+    }
+    toString() {
+      const prods = this.listProductions();
+      if (!prods.length) return "P = \u2205";
+      return prods.map(({ lhs, rhs }) => `${lhs} \u2192 ${rhs.length ? rhs.join(" ") : LAMBDA}`).join("\n");
+    }
+    leftmostDerivation(word) {
+      if (!this.startSymbol) throw new Error("Defina o s\xEDmbolo inicial antes de derivar.");
+      const target = tokenizeWord(word);
+      const maxSteps = Math.max(2 * target.length + 4, 8);
+      const queue = [{
+        tokens: [this.startSymbol],
+        steps: [],
+        history: [this.startSymbol]
+      }];
+      let iterations = 0;
+      while (queue.length && iterations < 2e3) {
+        iterations++;
+        const node = queue.shift();
+        const onlyTerminals = node.tokens.every((t) => !this.variables.has(t));
+        if (onlyTerminals) {
+          const finalTokens = node.tokens.filter((t) => t !== LAMBDA);
+          if (arraysEqual(finalTokens, target)) {
+            return {
+              steps: node.steps,
+              sententialForms: node.history,
+              parseTree: buildParseTreeFromSteps(this, node.steps)
+            };
+          }
+          continue;
+        }
+        if (node.history.length > maxSteps) continue;
+        const idx = node.tokens.findIndex((t) => this.variables.has(t));
+        if (idx === -1) continue;
+        const lhs = node.tokens[idx];
+        const prods = this.productions.get(lhs) || [];
+        for (const prod of prods) {
+          const rhs = prod.rhs;
+          const nextTokens = node.tokens.slice(0, idx).concat(rhs.length ? rhs : [LAMBDA], node.tokens.slice(idx + 1));
+          if (!isCompatiblePrefix(nextTokens, target, this.variables)) continue;
+          const historyEntry = tokensToDisplay(nextTokens);
+          const nextHistory = node.history.concat(historyEntry);
+          if (nextHistory.length > maxSteps) continue;
+          queue.push({
+            tokens: nextTokens,
+            steps: node.steps.concat([{ variable: lhs, production: rhs.slice() }]),
+            history: nextHistory
+          });
+        }
+      }
+      return null;
+    }
+    toChomskyNormalForm() {
+      if (!this.startSymbol) throw new Error("Defina o s\xEDmbolo inicial antes de converter.");
+      const g = this.clone();
+      const originalStart = g.startSymbol;
+      let newStart = "S0";
+      while (g.variables.has(newStart) || g.terminals.has(newStart)) {
+        newStart = `${newStart}'`;
+      }
+      g.variables.add(newStart);
+      g.startSymbol = newStart;
+      g.addProduction(newStart, [originalStart]);
+      const nullable = computeNullable(g);
+      removeLambdaProductions(g, nullable, originalStart);
+      removeUnitProductions(g);
+      convertToCnf(g);
+      return g;
+    }
+  };
+  function arraysEqual(a, b) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+  }
+  function sanitizeSymbol(sym) {
+    return String(sym).replace(/[^A-Za-z0-9]/g, "_");
+  }
+  function tokensToDisplay(tokens) {
+    const filtered = tokens.filter((t) => t !== LAMBDA);
+    return filtered.length ? filtered.join(" ") : LAMBDA;
+  }
+  function isCompatiblePrefix(tokens, target, variables) {
+    const prefix = [];
+    for (const symbol of tokens) {
+      if (symbol === LAMBDA) continue;
+      if (variables.has(symbol)) break;
+      prefix.push(symbol);
+    }
+    for (let i = 0; i < prefix.length; i++) {
+      if (target[i] !== prefix[i]) return false;
+    }
+    const suffix = [];
+    for (let i = tokens.length - 1; i >= 0; i--) {
+      const symbol = tokens[i];
+      if (symbol === LAMBDA) continue;
+      if (variables.has(symbol)) break;
+      suffix.unshift(symbol);
+    }
+    for (let i = 0; i < suffix.length; i++) {
+      const targetIndex = target.length - suffix.length + i;
+      if (targetIndex < 0 || target[targetIndex] !== suffix[i]) return false;
+    }
+    const terminalCount = tokens.filter((sym) => sym !== LAMBDA && !variables.has(sym)).length;
+    if (terminalCount > target.length) return false;
+    return true;
+  }
+  function buildParseTreeFromSteps(grammar, steps) {
+    const root = { symbol: grammar.startSymbol, children: [] };
+    for (const step of steps) {
+      const targetNode = findLeftmostExpandable(root, grammar.variables);
+      if (!targetNode) break;
+      if (!step.production.length) {
+        targetNode.children = [{ symbol: LAMBDA, children: [] }];
+      } else {
+        targetNode.children = step.production.map((sym) => ({ symbol: sym, children: [] }));
+      }
+    }
+    return root;
+  }
+  function findLeftmostExpandable(node, variables) {
+    if (variables.has(node.symbol) && (!node.children || node.children.length === 0)) {
+      return node;
+    }
+    if (!node.children) return null;
+    for (const child of node.children) {
+      const found = findLeftmostExpandable(child, variables);
+      if (found) return found;
+    }
+    return null;
+  }
+  function formatParseTree(node, prefix = "", isLast = true) {
+    const line = (prefix ? prefix + (isLast ? "\u2514\u2500\u2500 " : "\u251C\u2500\u2500 ") : "") + node.symbol;
+    if (!node.children || !node.children.length) return line;
+    const childPrefix = prefix + (prefix ? isLast ? "    " : "\u2502   " : "");
+    const lines = [line];
+    node.children.forEach((child, index) => {
+      const lastChild = index === node.children.length - 1;
+      const nextPrefix = prefix ? childPrefix : isLast ? "    " : "\u2502   ";
+      lines.push(formatParseTree(child, nextPrefix, lastChild));
+    });
+    return lines.join("\n");
+  }
+  function computeNullable(grammar) {
+    const nullable = /* @__PURE__ */ new Set();
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const { lhs, rhs } of grammar.listProductions()) {
+        if (!rhs.length || rhs.every((sym) => nullable.has(sym))) {
+          if (!nullable.has(lhs)) {
+            nullable.add(lhs);
+            changed = true;
+          }
+        }
+      }
+    }
+    return nullable;
+  }
+  function removeLambdaProductions(grammar, nullable, originalStart) {
+    for (const { lhs, rhs, id: id2 } of grammar.listProductions()) {
+      if (!rhs.length) grammar.removeProduction(id2);
+    }
+    const newProductions = [];
+    for (const { lhs, rhs } of grammar.listProductions()) {
+      const indices = rhs.map((sym, idx) => nullable.has(sym) ? idx : -1).filter((idx) => idx >= 0);
+      const subsets = powerSet(indices);
+      for (const subset of subsets) {
+        const generated = rhs.filter((_, idx) => !subset.has(idx));
+        if (generated.length === rhs.length) continue;
+        if (!generated.length) continue;
+        newProductions.push({ lhs, rhs: generated });
+      }
+    }
+    newProductions.forEach(({ lhs, rhs }) => grammar.addProduction(lhs, rhs));
+    if (nullable.has(originalStart)) {
+      grammar.addProduction(grammar.startSymbol, []);
+    }
+  }
+  function removeUnitProductions(grammar) {
+    const productionsByLhs = grammar.productions;
+    const unitPairs = /* @__PURE__ */ new Map();
+    for (const lhs of productionsByLhs.keys()) unitPairs.set(lhs, /* @__PURE__ */ new Set([lhs]));
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const [lhs, arr] of productionsByLhs.entries()) {
+        for (const prod of arr) {
+          if (prod.rhs.length === 1 && productionsByLhs.has(prod.rhs[0])) {
+            const target = prod.rhs[0];
+            const set = unitPairs.get(lhs);
+            if (!set.has(target)) {
+              set.add(target);
+              changed = true;
+            }
+          }
+        }
+      }
+    }
+    for (const [lhs, arr] of productionsByLhs.entries()) {
+      const toRemove = arr.filter((prod) => prod.rhs.length === 1 && productionsByLhs.has(prod.rhs[0]));
+      for (const prod of toRemove) {
+        grammar.removeProduction(prod.id);
+      }
+    }
+    for (const [lhs, targets] of unitPairs.entries()) {
+      for (const target of targets) {
+        const prods = grammar.productions.get(target) || [];
+        for (const prod of prods) {
+          if (prod.rhs.length === 1 && grammar.productions.has(prod.rhs[0])) continue;
+          grammar.addProduction(lhs, prod.rhs.slice());
+        }
+      }
+    }
+  }
+  function convertToCnf(grammar) {
+    const terminalMap = /* @__PURE__ */ new Map();
+    const newProductions = [];
+    for (const { lhs, rhs, id: id2 } of grammar.listProductions()) {
+      grammar.removeProduction(id2);
+      let currentLhs = lhs;
+      if (rhs.length === 1 && !grammar.variables.has(rhs[0])) {
+        grammar.addProduction(currentLhs, rhs);
+        continue;
+      }
+      let currentRhs = rhs.slice();
+      currentRhs = currentRhs.map((sym) => {
+        if (grammar.variables.has(sym)) return sym;
+        if (!terminalMap.has(sym)) {
+          let name = `T_${sanitizeSymbol(sym)}`;
+          while (grammar.variables.has(name)) name = `${name}'`;
+          grammar.variables.add(name);
+          grammar.addProduction(name, [sym]);
+          terminalMap.set(sym, name);
+        }
+        return terminalMap.get(sym);
+      });
+      while (currentRhs.length > 2) {
+        const first = currentRhs.shift();
+        const restNameBase = `${sanitizeSymbol(first)}${sanitizeSymbol(currentRhs.join(""))}`;
+        let newVar = `X_${restNameBase}`;
+        while (grammar.variables.has(newVar)) newVar = `${newVar}'`;
+        grammar.variables.add(newVar);
+        newProductions.push({ lhs: currentLhs, rhs: [first, newVar] });
+        currentLhs = newVar;
+      }
+      newProductions.push({ lhs: currentLhs, rhs: currentRhs });
+    }
+    newProductions.forEach((prod) => grammar.addProduction(prod.lhs, prod.rhs));
+  }
+  function powerSet(indices) {
+    const result = [];
+    const n = indices.length;
+    for (let mask = 1; mask < 1 << n; mask++) {
+      const set = /* @__PURE__ */ new Set();
+      for (let i = 0; i < n; i++) {
+        if (mask & 1 << i) set.add(indices[i]);
+      }
+      result.push(set);
+    }
+    return result;
+  }
+  var CFG = new ContextFreeGrammar();
+  var CURRENT_PDA = null;
+  function parseCommaList(value) {
+    if (!value) return [];
+    return value.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+  function parseRhs(value) {
+    if (!value) return [];
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === LAMBDA || trimmed.toLowerCase() === "lambda" || trimmed.toLowerCase() === "\u03B5" || trimmed.toLowerCase() === "epsilon") {
+      return [];
+    }
+    if (trimmed.includes(" ")) return trimmed.split(/\s+/).filter(Boolean);
+    return trimmed.split("").filter(Boolean);
+  }
+  function setupCfgUi() {
+    const varsInput = document.getElementById("cfgVariables");
+    const termsInput = document.getElementById("cfgTerminals");
+    const startInput = document.getElementById("cfgStart");
+    const setBtn = document.getElementById("cfgApplySymbolsBtn");
+    const lhsInput = document.getElementById("cfgProductionLhs");
+    const rhsInput = document.getElementById("cfgProductionRhs");
+    const addProdBtn = document.getElementById("cfgAddProductionBtn");
+    const prodList = document.getElementById("cfgProductionsList");
+    const cnfBtn = document.getElementById("cfgCnfBtn");
+    const cnfOut = document.getElementById("cfgCnfOutput");
+    const wordInput = document.getElementById("cfgDerivationWord");
+    const derivBtn = document.getElementById("cfgDerivationBtn");
+    const derivOut = document.getElementById("cfgDerivationOutput");
+    const treeOut = document.getElementById("cfgParseTreeOutput");
+    const pdaBtn = document.getElementById("cfgToPdaBtn");
+    const pdaOut = document.getElementById("cfgPdaOutput");
+    const simWordInput = document.getElementById("cfgPdaWord");
+    const simBtn = document.getElementById("cfgPdaSimulateBtn");
+    const simOut = document.getElementById("cfgPdaSimulationOutput");
+    const verifyBtn = document.getElementById("cfgVerifyBtn");
+    const status = document.getElementById("cfgStatus");
+    function invalidatePda() {
+      CURRENT_PDA = null;
+      if (pdaOut) pdaOut.textContent = "";
+    }
+    function renderProductions() {
+      prodList.innerHTML = "";
+      const prods = CFG.listProductions();
+      if (!prods.length) {
+        prodList.innerHTML = '<li class="muted">Nenhuma produ\xE7\xE3o cadastrada.</li>';
+        return;
+      }
+      for (const { lhs, rhs, id: id2 } of prods) {
+        const li = document.createElement("li");
+        li.innerHTML = `<code>${lhs} \u2192 ${rhs.length ? rhs.join(" ") : LAMBDA}</code>`;
+        const btn = document.createElement("button");
+        btn.textContent = "Remover";
+        btn.className = "btn-soft";
+        btn.addEventListener("click", () => {
+          CFG.removeProduction(id2);
+          invalidatePda();
+          renderProductions();
+        });
+        li.appendChild(btn);
+        prodList.appendChild(li);
+      }
+    }
+    setBtn.addEventListener("click", () => {
+      try {
+        CFG.setVariables(parseCommaList(varsInput.value));
+        CFG.setTerminals(parseCommaList(termsInput.value));
+        CFG.setStartSymbol(startInput.value.trim());
+        status.textContent = "Conjunto de s\xEDmbolos atualizado com sucesso.";
+        status.className = "mini success";
+        invalidatePda();
+        renderProductions();
+      } catch (e) {
+        status.textContent = e.message;
+        status.className = "mini error";
+      }
+    });
+    addProdBtn.addEventListener("click", () => {
+      try {
+        const lhs = lhsInput.value.trim();
+        const rhs = parseRhs(rhsInput.value);
+        CFG.addProduction(lhs, rhs);
+        lhsInput.value = "";
+        rhsInput.value = "";
+        renderProductions();
+        status.textContent = `Produ\xE7\xE3o ${lhs} \u2192 ${rhs.length ? rhs.join(" ") : LAMBDA} adicionada.`;
+        status.className = "mini success";
+        invalidatePda();
+      } catch (e) {
+        status.textContent = e.message;
+        status.className = "mini error";
+      }
+    });
+    cnfBtn.addEventListener("click", () => {
+      try {
+        const cnf = CFG.toChomskyNormalForm();
+        cnfOut.textContent = [
+          `Vari\xE1veis: { ${Array.from(cnf.variables).join(", ")} }`,
+          `Terminais: { ${Array.from(cnf.terminals).join(", ")} }`,
+          `Inicial: ${cnf.startSymbol}`,
+          "Produ\xE7\xF5es:",
+          cnf.toString()
+        ].join("\n");
+        status.textContent = "Gram\xE1tica convertida para a Forma Normal de Chomsky.";
+        status.className = "mini success";
+      } catch (e) {
+        cnfOut.textContent = "";
+        status.textContent = e.message;
+        status.className = "mini error";
+      }
+    });
+    function runDerivation() {
+      try {
+        const result = CFG.leftmostDerivation(wordInput.value);
+        if (!result) {
+          derivOut.textContent = "Nenhuma deriva\xE7\xE3o encontrada (verifique limites e produ\xE7\xF5es).";
+          treeOut.textContent = "";
+          status.textContent = "Senten\xE7a n\xE3o derivada com a estrat\xE9gia atual.";
+          status.className = "mini warning";
+          return;
+        }
+        derivOut.textContent = result.sententialForms.join(" \u21D2\n");
+        treeOut.textContent = formatParseTree(result.parseTree);
+        status.textContent = "Deriva\xE7\xE3o \xE0 esquerda conclu\xEDda.";
+        status.className = "mini success";
+      } catch (e) {
+        derivOut.textContent = "";
+        treeOut.textContent = "";
+        status.textContent = e.message;
+        status.className = "mini error";
+      }
+    }
+    derivBtn.addEventListener("click", runDerivation);
+    pdaBtn.addEventListener("click", () => {
+      try {
+        CURRENT_PDA = PushdownAutomaton.fromContextFreeGrammar(CFG);
+        pdaOut.textContent = CURRENT_PDA.describeTransitions();
+        status.textContent = "Aut\xF4mato de Pilha gerado a partir da GLC.";
+        status.className = "mini success";
+      } catch (e) {
+        pdaOut.textContent = "";
+        status.textContent = e.message;
+        status.className = "mini error";
+      }
+    });
+    function runSimulation() {
+      if (!CURRENT_PDA) {
+        status.textContent = "Gere um AP antes de simular.";
+        status.className = "mini warning";
+        return;
+      }
+      const word = simWordInput.value;
+      const result = CURRENT_PDA.simulate(word);
+      if (result.accepted) {
+        status.textContent = "Senten\xE7a aceita pelo AP (pilha vazia e estado final).";
+        status.className = "mini success";
+      } else {
+        status.textContent = "Senten\xE7a rejeitada pelo AP.";
+        status.className = "mini warning";
+      }
+      simOut.textContent = result.log.length ? result.log.join(" \u21D2\n") : "Nenhum caminho aceitador encontrado.";
+    }
+    simBtn.addEventListener("click", runSimulation);
+    verifyBtn.addEventListener("click", () => {
+      runDerivation();
+      runSimulation();
+    });
+    renderProductions();
+  }
+
   // js/main.js
   var hash = (location.hash || "").toLowerCase();
-  var MODE = hash === "#afn" ? "afn" : hash === "#gr" ? "gr" : "afd";
+  var MODE = hash === "#afn" ? "afn" : hash === "#gr" ? "gr" : hash === "#glc" ? "glc" : "afd";
   window.MODE = MODE;
-  var LS_KEY2 = MODE === "afn" ? "afn_sim_state_v1" : MODE === "gr" ? "afn_gr_sim_state_v1" : "afd_sim_state_v3";
+  var LS_KEY2 = MODE === "afn" ? "afn_sim_state_v1" : MODE === "gr" ? "afn_gr_sim_state_v1" : MODE === "glc" ? "cfg_state_v1" : "afd_sim_state_v3";
   setLsKey(LS_KEY2);
   var app = document.getElementById("app");
   var tpl = document.getElementById("tmpl-" + MODE);
   app.appendChild(tpl.content.cloneNode(true));
   document.querySelectorAll("nav.tabs a").forEach((a) => {
     const m = a.getAttribute("data-mode");
+    const href = a.getAttribute("href") || "";
     if (m === MODE) a.classList.add("active");
     else a.classList.remove("active");
+    if (!href.startsWith("#")) return;
     a.addEventListener("click", (e) => {
       e.preventDefault();
       if (m === MODE) return;
@@ -2659,38 +3308,42 @@ Atuais: ${syms.sort().join(", ")}`, syms.sort().join(","));
     });
   });
   window.addEventListener("hashchange", () => location.reload());
-  var hadCross = checkCrossImport();
-  var hadState = hadCross ? true : loadLS();
-  if (!hadState) {
-    A.alphabet = /* @__PURE__ */ new Set(["A", "B"]);
-    const s0 = { id: "q0", name: "q0", x: 180, y: 200, isInitial: true, isFinal: false };
-    const s1 = { id: "q1", name: "q1", x: 380, y: 200, isInitial: false, isFinal: true };
-    A.states.set(s0.id, s0);
-    A.states.set(s1.id, s1);
-    A.initialId = s0.id;
-    A.nextId = 2;
-    A.transitions.set(`${s0.id}|A`, /* @__PURE__ */ new Set([s1.id]));
-    A.transitions.set(`${s1.id}|B`, /* @__PURE__ */ new Set([s0.id]));
-    saveLS();
-  }
-  setupUIEventListeners();
-  setupRunControls();
-  setupAlgoView();
-  var btnRegex = document.getElementById("buildFromRegexBtn");
-  if (btnRegex) btnRegex.addEventListener("click", buildFromRegex);
-  var btnG = document.getElementById("buildFromGrammarBtn");
-  if (btnG) btnG.addEventListener("click", buildFromGrammar);
-  var btnGdfa = document.getElementById("buildFromGrammarToDfaBtn");
-  if (btnGdfa) btnGdfa.addEventListener("click", buildFromGrammarToDfa);
-  var btnGdfaOpen = document.getElementById("buildFromGrammarToDfaOpenBtn");
-  if (btnGdfaOpen) btnGdfaOpen.addEventListener("click", buildFromGrammarToDfaOpen);
-  var btnExportGr = document.getElementById("exportGrammarBtn");
-  if (btnExportGr) btnExportGr.addEventListener("click", exportGrammarFromAF);
-  updateAlphabetView();
-  renderAll();
-  var svg = document.getElementById("svg");
-  if (svg) svg.addEventListener("mousedown", () => {
-    runHighlight.clear();
+  if (MODE === "glc") {
+    setupCfgUi();
+  } else {
+    const hadCross = checkCrossImport();
+    const hadState = hadCross ? true : loadLS();
+    if (!hadState) {
+      A.alphabet = /* @__PURE__ */ new Set(["A", "B"]);
+      const s0 = { id: "q0", name: "q0", x: 180, y: 200, isInitial: true, isFinal: false };
+      const s1 = { id: "q1", name: "q1", x: 380, y: 200, isInitial: false, isFinal: true };
+      A.states.set(s0.id, s0);
+      A.states.set(s1.id, s1);
+      A.initialId = s0.id;
+      A.nextId = 2;
+      A.transitions.set(`${s0.id}|A`, /* @__PURE__ */ new Set([s1.id]));
+      A.transitions.set(`${s1.id}|B`, /* @__PURE__ */ new Set([s0.id]));
+      saveLS();
+    }
+    setupUIEventListeners();
+    setupRunControls();
+    setupAlgoView();
+    const btnRegex = document.getElementById("buildFromRegexBtn");
+    if (btnRegex) btnRegex.addEventListener("click", buildFromRegex);
+    const btnG = document.getElementById("buildFromGrammarBtn");
+    if (btnG) btnG.addEventListener("click", buildFromGrammar);
+    const btnGdfa = document.getElementById("buildFromGrammarToDfaBtn");
+    if (btnGdfa) btnGdfa.addEventListener("click", buildFromGrammarToDfa);
+    const btnGdfaOpen = document.getElementById("buildFromGrammarToDfaOpenBtn");
+    if (btnGdfaOpen) btnGdfaOpen.addEventListener("click", buildFromGrammarToDfaOpen);
+    const btnExportGr = document.getElementById("exportGrammarBtn");
+    if (btnExportGr) btnExportGr.addEventListener("click", exportGrammarFromAF);
+    updateAlphabetView();
     renderAll();
-  });
+    const svg = document.getElementById("svg");
+    if (svg) svg.addEventListener("mousedown", () => {
+      runHighlight.clear();
+      renderAll();
+    });
+  }
 })();
